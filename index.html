@@ -5,24 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>프로 노트</title>
 <style>
-  :root { --bg:#f7f6f3; --fg:#1f1f1f; --muted:#6b6b6b; --accent:#2f5d50; --err:#b3261e; }
+  :root { --bg:#f7f6f3; --fg:#1f1f1f; --muted:#6b6b6b; --accent:#2f5d50; --err:#b3261e; --ok:#1e6b3a; }
   * { box-sizing: border-box; }
-  body {
-    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    background: var(--bg); color: var(--fg);
-    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
-  }
-  main { width: 100%; max-width: 360px; padding: 32px 24px; text-align: center; }
-  h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: -0.5px; }
-  .sub { color: var(--muted); margin: 0 0 40px; font-size: 15px; }
-  button {
-    width: 100%; padding: 16px; font-size: 17px; font-weight: 600;
-    border: 0; border-radius: 12px; background: var(--accent); color: #fff; cursor: pointer;
-  }
-  button:disabled { opacity: .5; cursor: default; }
-  #msg { margin-top: 24px; font-size: 16px; line-height: 1.6; min-height: 1.6em; }
-  #msg.error { color: var(--err); font-size: 14px; text-align: left; white-space: pre-wrap; }
-  .hello { font-size: 20px; font-weight: 600; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:var(--bg); color:var(--fg);
+    font-family:-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; }
+  main { width:100%; max-width:380px; padding:32px 24px; text-align:center; }
+  h1 { font-size:28px; margin:0 0 8px; letter-spacing:-0.5px; }
+  .sub { color:var(--muted); margin:0 0 36px; font-size:15px; }
+  button { width:100%; padding:16px; font-size:17px; font-weight:600;
+    border:0; border-radius:12px; background:var(--accent); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  #msg { margin-top:24px; font-size:15px; line-height:1.7; text-align:left; }
+  #msg .center { text-align:center; }
+  .hello { font-size:20px; font-weight:600; text-align:center; margin-bottom:16px; }
+  .ok { color:var(--ok); font-weight:600; }
+  .err { color:var(--err); white-space:pre-wrap; font-size:13px; }
+  .step { color:var(--muted); font-size:14px; }
+  a { color:var(--accent); }
 </style>
 </head>
 <body>
@@ -30,87 +30,197 @@
   <h1>프로 노트</h1>
   <p class="sub">나의 삶의 프로</p>
   <button id="login" disabled>구글로 로그인</button>
-  <div id="msg">불러오는 중…</div>
+  <div id="msg"><div class="center step">불러오는 중…</div></div>
 </main>
 
 <script>
-  // 구글에서 발급받은 앱 이름표(클라이언트 ID). 공개돼도 되는 값이다.
-  // 등록된 주소(jerryseol1031.github.io)에서만 작동한다.
+  // ── 설정 ──────────────────────────────────────────────
   const CLIENT_ID = '297972351948-2fq40d61rpp8dngqmg36mn5kqhnp2ebq.apps.googleusercontent.com';
+  const SCOPE     = 'https://www.googleapis.com/auth/drive.file';
 
-  // 이 앱이 요청하는 권한은 이것 하나뿐이다: "이 앱이 만든 파일만" (drive.file)
-  const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+  const SHEET_NAME = '프로 노트 — 기록';
+  const MARK_KEY   = 'pronote';    // 앱만 읽을 수 있는 표시. 이걸로 자기 시트를 다시 찾는다
+  const MARK_VALUE = 'sheet';
 
-  const loginBtn = document.getElementById('login');
-  const msg = document.getElementById('msg');
-  let tokenClient = null;
+  // 탭 이름과 첫 줄(칸 이름). 설계 v0.9.0의 표 그대로다.
+  const TABS = [
+    ['로드맵',   ['연도','비전','미션','꿈꾸는 삶의 모습','3년 후','1년 후','수정시각']],
+    ['피드백',   ['피드백ID','기간 단위','기간','영역ID','영역','피드백','수정시각','삭제됨']],
+    ['계획항목', ['항목ID','기간 단위','기간','영역ID','영역','주제ID','주제','계획','평가','평가메모','이월횟수','순서','수정시각','삭제됨']],
+    ['일기',     ['일기ID','기간 단위','기간','내용','수정시각','삭제됨']],
+    ['영역설정', ['영역ID','이름','기본/커스텀','일','주','분기','연','순서','수정시각','삭제됨']],
+    ['주제설정', ['주제ID','영역ID','영역','이름','상태','순서','수정시각','삭제됨']],
+    ['핵심문제', ['핵심문제ID','기간 단위','기간','내용','수정시각','삭제됨']]
+  ];
 
-  function show(text, isError) {
-    msg.className = isError ? 'error' : '';
-    msg.textContent = text;
+  // 기본 영역 셋. 번호표가 고정값인 이유는 앱이 "어느 것이 실행 초점인지" 알아야 하기 때문이다.
+  function 기본영역행들(now) {
+    return [
+      ['base_action',       '실행 초점', '기본', 'O', 'O', 'O', 'O', 1, now, ''],
+      ['base_constitution', '체질 초점', '기본', 'O', 'O', 'O', 'O', 2, now, ''],
+      ['base_goal',         '핵심 목표', '기본', '',  '',  'O', 'O', 3, now, '']
+    ];
   }
 
-  // 구글 로그인 도구가 다 불러와지면 실행된다
+  // ── 화면 도우미 ───────────────────────────────────────
+  const loginBtn = document.getElementById('login');
+  const msg = document.getElementById('msg');
+  let tokenClient = null, token = null;
+
+  function clear() { msg.innerHTML = ''; }
+  function line(text, cls) {
+    const d = document.createElement('div');
+    if (cls) d.className = cls;
+    d.textContent = text;
+    msg.appendChild(d);
+    return d;
+  }
+  function link(url, text) {
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = text;
+    const d = document.createElement('div'); d.appendChild(a); msg.appendChild(d);
+  }
+  function 지금() {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  // ── 구글에 말 거는 공통 함수 ──────────────────────────
+  async function api(url, options) {
+    const opt = options || {};
+    opt.headers = Object.assign({ Authorization: 'Bearer ' + token }, opt.headers || {});
+    const r = await fetch(url, opt);
+    const text = await r.text();
+    if (!r.ok) throw new Error(r.status + ' ' + url + '\n' + text);
+    return text ? JSON.parse(text) : {};
+  }
+
+  // ── 로그인 ────────────────────────────────────────────
   function initGoogle() {
     tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPE,
-      callback: onToken,
+      client_id: CLIENT_ID, scope: SCOPE, callback: onToken,
       error_callback: function (err) {
         loginBtn.disabled = false;
-        if (err && err.type === 'popup_closed') { show('로그인 창이 닫혔습니다. 다시 눌러 주세요.'); return; }
-        if (err && err.type === 'popup_failed_to_open') { show('로그인 창이 열리지 않았습니다.\n브라우저의 팝업 차단을 풀고 다시 눌러 주세요.', true); return; }
-        show('로그인 중 문제가 생겼습니다.\n' + JSON.stringify(err), true);
+        clear();
+        if (err && err.type === 'popup_closed') { line('로그인 창이 닫혔습니다. 다시 눌러 주세요.', 'center step'); return; }
+        if (err && err.type === 'popup_failed_to_open') { line('로그인 창이 열리지 않았습니다.\n브라우저의 팝업 차단을 풀어 주세요.', 'err'); return; }
+        line('로그인 중 문제가 생겼습니다.\n' + JSON.stringify(err), 'err');
       }
     });
     loginBtn.disabled = false;
-    show('');
+    clear();
   }
 
   loginBtn.addEventListener('click', function () {
     if (!tokenClient) return;
     loginBtn.disabled = true;
-    show('로그인 창을 여는 중…');
+    clear(); line('로그인 창을 여는 중…', 'center step');
     tokenClient.requestAccessToken();
   });
 
-  // 로그인이 끝나고 구글이 '출입증'을 돌려주면 실행된다
   async function onToken(resp) {
     if (resp.error) {
-      loginBtn.disabled = false;
-      show('구글이 로그인을 거절했습니다.\n' + resp.error + (resp.error_description ? '\n' + resp.error_description : ''), true);
+      loginBtn.disabled = false; clear();
+      line('구글이 로그인을 거절했습니다.\n' + resp.error + (resp.error_description ? '\n' + resp.error_description : ''), 'err');
       return;
     }
-
-    // 참가자가 동의 화면에서 드라이브 권한 체크를 풀었을 수 있다
     if (!google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) {
-      loginBtn.disabled = false;
-      show('드라이브 권한에 동의해야 기록을 저장할 수 있습니다.\n다시 로그인하면서 권한 체크를 켜 주세요.', true);
+      loginBtn.disabled = false; clear();
+      line('드라이브 권한에 동의해야 기록을 저장할 수 있습니다.\n다시 로그인하면서 권한 체크를 켜 주세요.', 'err');
       return;
     }
+    token = resp.access_token;
+    loginBtn.style.display = 'none';
+    await 시작();
+  }
 
-    // 드라이브에 "나는 누구인가"를 물어서 이름을 받아온다.
-    // drive.file 권한만으로 된다 — 이름을 얻으려고 권한을 더 요청하지 않는다.
+  // ── 본 흐름 ───────────────────────────────────────────
+  async function 시작() {
+    clear();
     try {
-      const r = await fetch('https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress)', {
-        headers: { Authorization: 'Bearer ' + resp.access_token }
-      });
-      if (!r.ok) throw new Error('드라이브 응답 ' + r.status + '\n' + (await r.text()));
-      const data = await r.json();
-      const name = (data.user && data.user.displayName) || '이름 없음';
-      loginBtn.style.display = 'none';
-      msg.className = '';
-      msg.innerHTML = '';
-      const hello = document.createElement('div');
-      hello.className = 'hello';
-      hello.textContent = '안녕하세요, ' + name + '님';
-      msg.appendChild(hello);
+      // 1. 인사
+      const me = await api('https://www.googleapis.com/drive/v3/about?fields=user(displayName)');
+      line('안녕하세요, ' + ((me.user && me.user.displayName) || '') + '님', 'hello');
+
+      // 2. 내 시트가 이미 있는지 찾는다 (표시로 찾는다 — 이름으로 찾지 않는다)
+      const 진행 = line('기록 시트를 찾는 중…', 'step');
+      const q = encodeURIComponent("appProperties has { key='" + MARK_KEY + "' and value='" + MARK_VALUE + "' } and trashed = false");
+      const 찾은결과 = await api('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)');
+      const 시트들 = 찾은결과.files || [];
+
+      if (시트들.length > 1) {
+        진행.textContent = '';
+        line('⚠ 기록 시트가 ' + 시트들.length + '개 있습니다. 하나만 있어야 합니다.', 'err');
+        시트들.forEach(f => link('https://docs.google.com/spreadsheets/d/' + f.id + '/edit', '· ' + f.name));
+        line('어느 것을 쓸지 정해야 하므로 여기서 멈춥니다.', 'step');
+        return;
+      }
+
+      if (시트들.length === 1) {
+        진행.textContent = '';
+        line('이미 있는 기록 시트를 찾았습니다. 새로 만들지 않았습니다.', 'ok');
+        link('https://docs.google.com/spreadsheets/d/' + 시트들[0].id + '/edit', 시트들[0].name + ' 열기');
+        return;
+      }
+
+      // 3. 없으면 만든다
+      진행.textContent = '기록 시트를 만드는 중…';
+      const id = await 시트만들기();
+      진행.textContent = '';
+      line('기록 시트를 새로 만들었습니다. 탭 ' + TABS.length + '개와 칸 이름까지 넣었습니다.', 'ok');
+      link('https://docs.google.com/spreadsheets/d/' + id + '/edit', SHEET_NAME + ' 열기');
+      line('이 페이지를 새로고침하면, 이번에는 새로 만들지 않고 이 시트를 찾아야 정상입니다.', 'step');
+
     } catch (e) {
-      loginBtn.disabled = false;
-      show('로그인은 됐지만 이름을 가져오지 못했습니다.\n' + e.message, true);
+      line('문제가 생겨 멈췄습니다.\n' + e.message, 'err');
     }
   }
+
+  async function 시트만들기() {
+    const now = 지금();
+
+    // (1) 먼저 드라이브에 빈 시트 파일을 만든다. 만드는 그 순간에 표시를 붙인다.
+    //     — 표시 없이 먼저 만들면, 다음 단계에서 실패했을 때 앱이 못 찾는 미아 파일이 남는다.
+    const 파일 = await api('https://www.googleapis.com/drive/v3/files?fields=id', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: SHEET_NAME,
+        mimeType: 'application/vnd.google-apps.spreadsheet',
+        appProperties: { [MARK_KEY]: MARK_VALUE }
+      })
+    });
+    const id = 파일.id;
+
+    // (2) 처음 만들어진 탭 하나의 번호를 알아낸다 (이름이 '시트1'인 그것)
+    const 정보 = await api('https://sheets.googleapis.com/v4/spreadsheets/' + id + '?fields=sheets.properties(sheetId,title)');
+    const 첫탭번호 = 정보.sheets[0].properties.sheetId;
+
+    // (3) 첫 탭 이름을 바꾸고, 나머지 탭을 만든다
+    const 요청들 = [
+      { updateSheetProperties: { properties: { sheetId: 첫탭번호, title: TABS[0][0] }, fields: 'title' } }
+    ];
+    for (let i = 1; i < TABS.length; i++) {
+      요청들.push({ addSheet: { properties: { title: TABS[i][0] } } });
+    }
+    await api('https://sheets.googleapis.com/v4/spreadsheets/' + id + ':batchUpdate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: 요청들 })
+    });
+
+    // (4) 각 탭 첫 줄에 칸 이름을 쓰고, 영역설정에는 기본 영역 셋을 미리 넣는다
+    const 쓸것 = TABS.map(t => ({ range: "'" + t[0] + "'!A1", values: [t[1]] }));
+    쓸것.push({ range: "'영역설정'!A2", values: 기본영역행들(now) });
+    await api('https://sheets.googleapis.com/v4/spreadsheets/' + id + '/values:batchUpdate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valueInputOption: 'RAW', data: 쓸것 })
+    });
+
+    return id;
+  }
 </script>
-<script src="https://accounts.google.com/gsi/client" async defer onload="initGoogle()" onerror="show('구글 로그인 도구를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.', true)"></script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="initGoogle()"></script>
 </body>
 </html>
