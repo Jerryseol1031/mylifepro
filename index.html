@@ -59,7 +59,10 @@
   .옅은단추 { padding:0 10px; min-height:38px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--fg); font-size:13px; flex:none; }
   .지우기단추 { color:var(--err); }
   .글자단추 { border:0; background:none; color:var(--accent); font-size:12px; padding:8px 0 0; }
-  .칸제목 { font-size:12px; color:var(--muted); margin:10px 0 4px; }
+  /* 계획·피드백은 영역 안의 구획 제목이다 — 점선으로 구획을 나누고, 색 막대와 굵은 글씨로 제목임을 보인다 */
+  .칸제목 { font-size:12px; font-weight:700; color:var(--accent); letter-spacing:.3px;
+    margin:12px 0 6px; padding:10px 0 0 8px; border-top:1px dashed var(--line); position:relative; }
+  .칸제목::before { content:''; position:absolute; left:0; top:11px; bottom:1px; width:3px; border-radius:2px; background:var(--accent); }
   .저장줄 { display:flex; justify-content:flex-end; margin-top:6px; }
 
   #msg { position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:10; width:max-content; max-width:calc(100% - 24px);
