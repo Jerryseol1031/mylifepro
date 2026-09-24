@@ -5,23 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>프로 노트</title>
 <style>
-  :root { --bg:#f7f6f3; --fg:#1f1f1f; --muted:#6b6b6b; --accent:#2f5d50; --err:#b3261e; --ok:#1e6b3a; }
-  * { box-sizing: border-box; }
-  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
-    background:var(--bg); color:var(--fg);
+  :root { --bg:#f7f6f3; --fg:#1f1f1f; --muted:#6b6b6b; --line:#e5e3de; --accent:#2f5d50; --err:#b3261e; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--fg);
     font-family:-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; }
-  main { width:100%; max-width:380px; padding:32px 24px; text-align:center; }
-  h1 { font-size:28px; margin:0 0 8px; letter-spacing:-0.5px; }
-  .sub { color:var(--muted); margin:0 0 36px; font-size:15px; }
-  button { width:100%; padding:16px; font-size:17px; font-weight:600;
+  main { max-width:420px; margin:0 auto; padding:28px 20px 60px; }
+  h1 { font-size:24px; margin:0 0 4px; letter-spacing:-0.5px; }
+  .sub { color:var(--muted); margin:0 0 28px; font-size:14px; }
+  button { width:100%; padding:15px; font-size:16px; font-weight:600;
     border:0; border-radius:12px; background:var(--accent); color:#fff; cursor:pointer; }
   button:disabled { opacity:.5; cursor:default; }
-  #msg { margin-top:24px; font-size:15px; line-height:1.7; text-align:left; }
-  #msg .center { text-align:center; }
-  .hello { font-size:20px; font-weight:600; text-align:center; margin-bottom:16px; }
-  .ok { color:var(--ok); font-weight:600; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; margin-top:16px; }
+  .날짜 { font-size:17px; font-weight:600; margin-bottom:2px; }
+  .영역 { font-size:13px; color:var(--muted); margin:18px 0 8px; }
+  ul { list-style:none; margin:0 0 12px; padding:0; }
+  li { padding:10px 0; border-bottom:1px solid var(--line); font-size:15px; line-height:1.5; }
+  li:last-child { border-bottom:0; }
+  .없음 { color:var(--muted); font-size:14px; padding:10px 0; }
+  .입력줄 { display:flex; gap:8px; margin-top:8px; }
+  input { flex:1; min-width:0; padding:13px; font-size:15px; border:1px solid var(--line);
+    border-radius:10px; background:#fff; color:var(--fg); font-family:inherit; }
+  .입력줄 button { width:auto; padding:13px 18px; }
+  #msg { margin-top:16px; font-size:14px; line-height:1.7; }
   .err { color:var(--err); white-space:pre-wrap; font-size:13px; }
-  .step { color:var(--muted); font-size:14px; }
+  .step { color:var(--muted); }
   a { color:var(--accent); }
 </style>
 </head>
@@ -30,19 +37,18 @@
   <h1>프로 노트</h1>
   <p class="sub">나의 삶의 프로</p>
   <button id="login" disabled>구글로 로그인</button>
-  <div id="msg"><div class="center step">불러오는 중…</div></div>
+  <div id="화면"></div>
+  <div id="msg"><div class="step">불러오는 중…</div></div>
 </main>
 
 <script>
-  // ── 설정 ──────────────────────────────────────────────
   const CLIENT_ID = '297972351948-2fq40d61rpp8dngqmg36mn5kqhnp2ebq.apps.googleusercontent.com';
   const SCOPE     = 'https://www.googleapis.com/auth/drive.file';
-
   const SHEET_NAME = '프로 노트 — 기록';
-  const MARK_KEY   = 'pronote';    // 앱만 읽을 수 있는 표시. 이걸로 자기 시트를 다시 찾는다
-  const MARK_VALUE = 'sheet';
+  const MARK_KEY = 'pronote', MARK_VALUE = 'sheet';
+  const 탭 = '계획항목';
+  const 실행초점 = { id:'base_action', 이름:'실행 초점' };
 
-  // 탭 이름과 첫 줄(칸 이름). 설계 v0.9.0의 표 그대로다.
   const TABS = [
     ['로드맵',   ['연도','비전','미션','꿈꾸는 삶의 모습','3년 후','1년 후','수정시각']],
     ['피드백',   ['피드백ID','기간 단위','기간','영역ID','영역','피드백','수정시각','삭제됨']],
@@ -52,173 +58,166 @@
     ['주제설정', ['주제ID','영역ID','영역','이름','상태','순서','수정시각','삭제됨']],
     ['핵심문제', ['핵심문제ID','기간 단위','기간','내용','수정시각','삭제됨']]
   ];
-
-  // 기본 영역 셋. 번호표가 고정값인 이유는 앱이 "어느 것이 실행 초점인지" 알아야 하기 때문이다.
   function 기본영역행들(now) {
     return [
-      ['base_action',       '실행 초점', '기본', 'O', 'O', 'O', 'O', 1, now, ''],
-      ['base_constitution', '체질 초점', '기본', 'O', 'O', 'O', 'O', 2, now, ''],
-      ['base_goal',         '핵심 목표', '기본', '',  '',  'O', 'O', 3, now, '']
+      ['base_action','실행 초점','기본','O','O','O','O',1,now,''],
+      ['base_constitution','체질 초점','기본','O','O','O','O',2,now,''],
+      ['base_goal','핵심 목표','기본','','','O','O',3,now,'']
     ];
   }
 
-  // ── 화면 도우미 ───────────────────────────────────────
   const loginBtn = document.getElementById('login');
+  const 화면 = document.getElementById('화면');
   const msg = document.getElementById('msg');
-  let tokenClient = null, token = null;
+  let token = null, tokenClient = null, 시트ID = null;
 
-  function clear() { msg.innerHTML = ''; }
-  function line(text, cls) {
-    const d = document.createElement('div');
-    if (cls) d.className = cls;
-    d.textContent = text;
-    msg.appendChild(d);
-    return d;
+  const p2 = n => String(n).padStart(2,'0');
+  function 오늘() { const d=new Date(); return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
+  function 지금() { const d=new Date(); return 오늘()+' '+p2(d.getHours())+':'+p2(d.getMinutes()); }
+  function 오늘표시() {
+    const d=new Date(), 요일='일월화수목금토'[d.getDay()];
+    return d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+요일+')';
   }
-  function link(url, text) {
-    const a = document.createElement('a');
-    a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = text;
-    const d = document.createElement('div'); d.appendChild(a); msg.appendChild(d);
-  }
-  function 지금() {
-    const d = new Date(), p = n => String(n).padStart(2, '0');
-    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
-  }
+  function 새번호표(앞) { return 앞 + Math.random().toString(36).slice(2,8); }
+  function 알림(text, cls) { msg.innerHTML=''; if(!text) return;
+    const d=document.createElement('div'); if(cls) d.className=cls; d.textContent=text; msg.appendChild(d); }
 
-  // ── 구글에 말 거는 공통 함수 ──────────────────────────
   async function api(url, options) {
     const opt = options || {};
-    opt.headers = Object.assign({ Authorization: 'Bearer ' + token }, opt.headers || {});
+    opt.headers = Object.assign({ Authorization:'Bearer '+token }, opt.headers||{});
     const r = await fetch(url, opt);
-    const text = await r.text();
-    if (!r.ok) throw new Error(r.status + ' ' + url + '\n' + text);
-    return text ? JSON.parse(text) : {};
+    const t = await r.text();
+    if (!r.ok) throw new Error(r.status + '\n' + t);
+    return t ? JSON.parse(t) : {};
   }
+  const 시트API = path => 'https://sheets.googleapis.com/v4/spreadsheets/' + 시트ID + path;
 
-  // ── 로그인 ────────────────────────────────────────────
+  // ── 로그인 ──
   function initGoogle() {
     tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID, scope: SCOPE, callback: onToken,
-      error_callback: function (err) {
-        loginBtn.disabled = false;
-        clear();
-        if (err && err.type === 'popup_closed') { line('로그인 창이 닫혔습니다. 다시 눌러 주세요.', 'center step'); return; }
-        if (err && err.type === 'popup_failed_to_open') { line('로그인 창이 열리지 않았습니다.\n브라우저의 팝업 차단을 풀어 주세요.', 'err'); return; }
-        line('로그인 중 문제가 생겼습니다.\n' + JSON.stringify(err), 'err');
-      }
+      client_id:CLIENT_ID, scope:SCOPE, callback:onToken,
+      error_callback: e => { loginBtn.disabled=false;
+        알림(e && e.type==='popup_closed' ? '로그인 창이 닫혔습니다. 다시 눌러 주세요.'
+                                        : '로그인 중 문제가 생겼습니다.\n'+JSON.stringify(e),
+             e && e.type==='popup_closed' ? 'step' : 'err'); }
     });
-    loginBtn.disabled = false;
-    clear();
+    loginBtn.disabled=false; 알림('');
   }
-
-  loginBtn.addEventListener('click', function () {
-    if (!tokenClient) return;
-    loginBtn.disabled = true;
-    clear(); line('로그인 창을 여는 중…', 'center step');
-    tokenClient.requestAccessToken();
-  });
+  loginBtn.addEventListener('click', () => { loginBtn.disabled=true; 알림('로그인 창을 여는 중…','step'); tokenClient.requestAccessToken(); });
 
   async function onToken(resp) {
-    if (resp.error) {
-      loginBtn.disabled = false; clear();
-      line('구글이 로그인을 거절했습니다.\n' + resp.error + (resp.error_description ? '\n' + resp.error_description : ''), 'err');
-      return;
-    }
+    if (resp.error) { loginBtn.disabled=false; 알림('구글이 로그인을 거절했습니다.\n'+resp.error,'err'); return; }
     if (!google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) {
-      loginBtn.disabled = false; clear();
-      line('드라이브 권한에 동의해야 기록을 저장할 수 있습니다.\n다시 로그인하면서 권한 체크를 켜 주세요.', 'err');
-      return;
-    }
+      loginBtn.disabled=false; 알림('드라이브 권한에 동의해야 기록을 저장할 수 있습니다.','err'); return; }
     token = resp.access_token;
-    loginBtn.style.display = 'none';
-    await 시작();
+    loginBtn.style.display='none';
+    await 준비();
   }
 
-  // ── 본 흐름 ───────────────────────────────────────────
-  async function 시작() {
-    clear();
+  // ── 시트 준비: 찾고, 없으면 만든다 ──
+  async function 준비() {
+    알림('기록 시트를 여는 중…','step');
     try {
-      // 1. 인사
-      const me = await api('https://www.googleapis.com/drive/v3/about?fields=user(displayName)');
-      line('안녕하세요, ' + ((me.user && me.user.displayName) || '') + '님', 'hello');
-
-      // 2. 내 시트가 이미 있는지 찾는다 (표시로 찾는다 — 이름으로 찾지 않는다)
-      const 진행 = line('기록 시트를 찾는 중…', 'step');
-      const q = encodeURIComponent("appProperties has { key='" + MARK_KEY + "' and value='" + MARK_VALUE + "' } and trashed = false");
-      const 찾은결과 = await api('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)');
-      const 시트들 = 찾은결과.files || [];
-
-      if (시트들.length > 1) {
-        진행.textContent = '';
-        line('⚠ 기록 시트가 ' + 시트들.length + '개 있습니다. 하나만 있어야 합니다.', 'err');
-        시트들.forEach(f => link('https://docs.google.com/spreadsheets/d/' + f.id + '/edit', '· ' + f.name));
-        line('어느 것을 쓸지 정해야 하므로 여기서 멈춥니다.', 'step');
-        return;
-      }
-
-      if (시트들.length === 1) {
-        진행.textContent = '';
-        line('이미 있는 기록 시트를 찾았습니다. 새로 만들지 않았습니다.', 'ok');
-        link('https://docs.google.com/spreadsheets/d/' + 시트들[0].id + '/edit', 시트들[0].name + ' 열기');
-        return;
-      }
-
-      // 3. 없으면 만든다
-      진행.textContent = '기록 시트를 만드는 중…';
-      const id = await 시트만들기();
-      진행.textContent = '';
-      line('기록 시트를 새로 만들었습니다. 탭 ' + TABS.length + '개와 칸 이름까지 넣었습니다.', 'ok');
-      link('https://docs.google.com/spreadsheets/d/' + id + '/edit', SHEET_NAME + ' 열기');
-      line('이 페이지를 새로고침하면, 이번에는 새로 만들지 않고 이 시트를 찾아야 정상입니다.', 'step');
-
-    } catch (e) {
-      line('문제가 생겨 멈췄습니다.\n' + e.message, 'err');
-    }
+      const q = encodeURIComponent("appProperties has { key='"+MARK_KEY+"' and value='"+MARK_VALUE+"' } and trashed = false");
+      const r = await api('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id,name)');
+      const 시트들 = r.files || [];
+      if (시트들.length > 1) { 알림('⚠ 기록 시트가 '+시트들.length+'개 있습니다. 하나만 있어야 해서 멈춥니다.','err'); return; }
+      시트ID = 시트들.length === 1 ? 시트들[0].id : await 시트만들기();
+      알림('');
+      await 그리기();
+    } catch (e) { 알림('시트를 여는 중 문제가 생겼습니다.\n'+e.message,'err'); }
   }
 
   async function 시트만들기() {
     const now = 지금();
-
-    // (1) 먼저 드라이브에 빈 시트 파일을 만든다. 만드는 그 순간에 표시를 붙인다.
-    //     — 표시 없이 먼저 만들면, 다음 단계에서 실패했을 때 앱이 못 찾는 미아 파일이 남는다.
     const 파일 = await api('https://www.googleapis.com/drive/v3/files?fields=id', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: SHEET_NAME,
-        mimeType: 'application/vnd.google-apps.spreadsheet',
-        appProperties: { [MARK_KEY]: MARK_VALUE }
-      })
-    });
-    const id = 파일.id;
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name:SHEET_NAME, mimeType:'application/vnd.google-apps.spreadsheet',
+                             appProperties:{ [MARK_KEY]:MARK_VALUE } }) });
+    시트ID = 파일.id;
+    const 정보 = await api(시트API('?fields=sheets.properties(sheetId,title)'));
+    const 요청들 = [{ updateSheetProperties:{ properties:{ sheetId:정보.sheets[0].properties.sheetId, title:TABS[0][0] }, fields:'title' } }];
+    for (let i=1;i<TABS.length;i++) 요청들.push({ addSheet:{ properties:{ title:TABS[i][0] } } });
+    await api(시트API(':batchUpdate'), { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ requests:요청들 }) });
+    const 쓸것 = TABS.map(t => ({ range:"'"+t[0]+"'!A1", values:[t[1]] }));
+    쓸것.push({ range:"'영역설정'!A2", values:기본영역행들(now) });
+    await api(시트API('/values:batchUpdate'), { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ valueInputOption:'RAW', data:쓸것 }) });
+    return 시트ID;
+  }
 
-    // (2) 처음 만들어진 탭 하나의 번호를 알아낸다 (이름이 '시트1'인 그것)
-    const 정보 = await api('https://sheets.googleapis.com/v4/spreadsheets/' + id + '?fields=sheets.properties(sheetId,title)');
-    const 첫탭번호 = 정보.sheets[0].properties.sheetId;
+  // ── 칸은 이름으로 찾는다 (원칙 6). 몇 번째인지 세지 않는다 ──
+  async function 칸자리() {
+    const r = await api(시트API('/values/' + encodeURIComponent("'"+탭+"'!1:1")));
+    const 이름들 = (r.values && r.values[0]) || [];
+    const 자리 = {};
+    이름들.forEach((이름, i) => { 자리[String(이름).trim()] = i; });
+    const 필요 = ['항목ID','기간 단위','기간','영역ID','영역','계획','순서','이월횟수','수정시각','삭제됨'];
+    const 없는칸 = 필요.filter(n => !(n in 자리));
+    if (없는칸.length) throw new Error('「'+탭+'」 탭에서 이 칸을 못 찾았습니다: '+없는칸.join(', ')
+      + '\n칸 이름이 바뀌었을 수 있습니다. 원래 이름으로 되돌려 주세요. (저장하지 않았습니다)');
+    return { 자리, 칸수: 이름들.length };
+  }
 
-    // (3) 첫 탭 이름을 바꾸고, 나머지 탭을 만든다
-    const 요청들 = [
-      { updateSheetProperties: { properties: { sheetId: 첫탭번호, title: TABS[0][0] }, fields: 'title' } }
-    ];
-    for (let i = 1; i < TABS.length; i++) {
-      요청들.push({ addSheet: { properties: { title: TABS[i][0] } } });
+  // ── 오늘의 실행 초점 계획을 읽어서 그린다 ──
+  async function 그리기() {
+    const { 자리 } = await 칸자리();
+    const r = await api(시트API('/values/' + encodeURIComponent("'"+탭+"'!A2:ZZ")));
+    const 행들 = r.values || [];
+    const 오늘것 = 행들.filter(행 =>
+      (행[자리['기간 단위']]||'') === '일' &&
+      (행[자리['기간']]||'') === 오늘() &&
+      (행[자리['영역ID']]||'') === 실행초점.id &&
+      !(행[자리['삭제됨']]||'').trim()
+    );
+
+    화면.innerHTML = '';
+    const card = document.createElement('div'); card.className='card';
+    const d1 = document.createElement('div'); d1.className='날짜'; d1.textContent = 오늘표시(); card.appendChild(d1);
+    const d2 = document.createElement('div'); d2.className='영역'; d2.textContent = 실행초점.이름; card.appendChild(d2);
+
+    if (오늘것.length === 0) {
+      const e = document.createElement('div'); e.className='없음'; e.textContent='아직 적은 것이 없습니다.'; card.appendChild(e);
+    } else {
+      const ul = document.createElement('ul');
+      오늘것.forEach(행 => { const li=document.createElement('li'); li.textContent = 행[자리['계획']]||''; ul.appendChild(li); });
+      card.appendChild(ul);
     }
-    await api('https://sheets.googleapis.com/v4/spreadsheets/' + id + ':batchUpdate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requests: 요청들 })
-    });
 
-    // (4) 각 탭 첫 줄에 칸 이름을 쓰고, 영역설정에는 기본 영역 셋을 미리 넣는다
-    const 쓸것 = TABS.map(t => ({ range: "'" + t[0] + "'!A1", values: [t[1]] }));
-    쓸것.push({ range: "'영역설정'!A2", values: 기본영역행들(now) });
-    await api('https://sheets.googleapis.com/v4/spreadsheets/' + id + '/values:batchUpdate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ valueInputOption: 'RAW', data: 쓸것 })
-    });
+    const 줄 = document.createElement('div'); 줄.className='입력줄';
+    const inp = document.createElement('input');
+    inp.type='text'; inp.placeholder='오늘 할 일 한 줄'; inp.maxLength=200;
+    const btn = document.createElement('button'); btn.textContent='추가';
+    줄.appendChild(inp); 줄.appendChild(btn); card.appendChild(줄);
+    화면.appendChild(card);
 
-    return id;
+    const 저장 = async () => {
+      const 글 = inp.value.trim();
+      if (!글) { inp.focus(); return; }
+      btn.disabled = true; inp.disabled = true; 알림('저장하는 중…','step');
+      try { await 한줄쓰기(글, 오늘것.length + 1); 알림(''); await 그리기(); }
+      catch (e) { btn.disabled=false; inp.disabled=false; 알림('저장하지 못했습니다.\n'+e.message,'err'); }
+    };
+    btn.addEventListener('click', 저장);
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') 저장(); });
+  }
+
+  // ── 한 줄 쓰기: 맨 아래에 새로 붙인다 (행 위치를 기억하지 않는다 — 원칙 5) ──
+  async function 한줄쓰기(글, 순서) {
+    const { 자리, 칸수 } = await 칸자리();
+    const 행 = new Array(칸수).fill('');
+    행[자리['항목ID']]    = 새번호표('it_');
+    행[자리['기간 단위']] = '일';
+    행[자리['기간']]      = 오늘();
+    행[자리['영역ID']]    = 실행초점.id;
+    행[자리['영역']]      = 실행초점.이름;
+    행[자리['계획']]      = 글;
+    행[자리['이월횟수']]  = 0;
+    행[자리['순서']]      = 순서;
+    행[자리['수정시각']]  = 지금();
+    await api(시트API('/values/' + encodeURIComponent("'"+탭+"'!A1") + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS'),
+      { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ values:[행] }) });
   }
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogle()"></script>
