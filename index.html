@@ -5,38 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>프로 노트</title>
 <style>
-  :root { --bg:#f7f6f3; --fg:#1f1f1f; --muted:#6b6b6b; --line:#e5e3de; --accent:#2f5d50; --err:#b3261e; }
+  :root { --bg:#f7f6f3; --fg:#1f1f1f; --muted:#6b6b6b; --line:#e5e3de; --accent:#2f5d50; --soft:#e8efe9; --err:#b3261e; --warn:#8a5a00; }
   * { box-sizing:border-box; }
   body { margin:0; min-height:100vh; background:var(--bg); color:var(--fg);
     font-family:-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; }
-  main { max-width:420px; margin:0 auto; padding:28px 20px 60px; }
+  main { max-width:460px; margin:0 auto; padding:28px 16px 80px; }
   h1 { font-size:24px; margin:0 0 4px; letter-spacing:-0.5px; }
-  .sub { color:var(--muted); margin:0 0 28px; font-size:14px; }
-  button { width:100%; padding:15px; font-size:16px; font-weight:600;
-    border:0; border-radius:12px; background:var(--accent); color:#fff; cursor:pointer; }
+  .sub { color:var(--muted); margin:0 0 20px; font-size:14px; }
+  button { font-family:inherit; cursor:pointer; }
+  #login { width:100%; padding:15px; font-size:16px; font-weight:600; border:0; border-radius:12px; background:var(--accent); color:#fff; }
   button:disabled { opacity:.5; cursor:default; }
-  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; margin-top:16px; }
-  .날짜 { font-size:17px; font-weight:600; margin-bottom:2px; }
-  .영역 { font-size:13px; color:var(--muted); margin:18px 0 8px; }
-  ul { list-style:none; margin:0 0 12px; padding:0; }
-  li { padding:10px 0; border-bottom:1px solid var(--line); font-size:15px; line-height:1.5; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; margin-top:14px; }
+
+  .날짜줄 { display:flex; align-items:center; gap:8px; }
+  .날짜줄 .넘김 { width:40px; height:40px; flex:none; border:1px solid var(--line); border-radius:10px; background:#fff; font-size:16px; color:var(--fg); }
+  .날짜 { flex:1; text-align:center; font-size:17px; font-weight:600; }
+  .날짜 small { display:block; font-size:12px; font-weight:500; color:var(--muted); margin-top:2px; }
+  .다른날 { margin-top:10px; padding:8px 12px; border-radius:10px; background:#fff4e0; color:var(--warn); font-size:13px; display:flex; justify-content:space-between; align-items:center; }
+  .다른날 button { border:0; background:none; color:var(--accent); font-weight:600; font-size:13px; padding:0; }
+
+  .영역머리 { display:flex; justify-content:space-between; align-items:baseline; }
+  .영역이름 { font-size:15px; font-weight:700; }
+  .달성률 { font-size:13px; color:var(--accent); font-weight:600; }
+  ul { list-style:none; margin:8px 0 0; padding:0; }
+  li { padding:10px 0; border-bottom:1px solid var(--line); }
   li:last-child { border-bottom:0; }
-  .없음 { color:var(--muted); font-size:14px; padding:10px 0; }
-  .입력줄 { display:flex; gap:8px; margin-top:8px; }
-  input { flex:1; min-width:0; padding:13px; font-size:15px; border:1px solid var(--line);
+  .항목줄 { display:flex; align-items:center; gap:8px; }
+  .항목글 { flex:1; min-width:0; font-size:15px; line-height:1.5; word-break:break-word; cursor:pointer; }
+  .꼬리표 { display:inline-block; font-size:11px; color:var(--muted); border:1px solid var(--line); border-radius:6px; padding:0 5px; margin-left:4px; vertical-align:1px; }
+  .평가들 { display:flex; gap:4px; flex:none; }
+  .평가들 button { width:34px; height:34px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--muted); font-size:15px; padding:0; }
+  .평가들 button.골라짐 { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .쪼개기 { font-size:12px; color:var(--warn); margin-top:4px; }
+  .없음 { color:var(--muted); font-size:14px; padding:8px 0 2px; }
+
+  .입력줄 { display:flex; gap:8px; margin-top:10px; }
+  input[type=text], textarea { flex:1; min-width:0; width:100%; padding:12px; font-size:15px; border:1px solid var(--line);
     border-radius:10px; background:#fff; color:var(--fg); font-family:inherit; }
-  .입력줄 button { width:auto; padding:13px 18px; }
+  textarea { resize:vertical; min-height:72px; line-height:1.5; display:block; }
+  .작은단추 { padding:0 16px; min-height:44px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-size:15px; font-weight:600; flex:none; }
+  .옅은단추 { padding:0 12px; min-height:44px; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--fg); font-size:14px; flex:none; }
+  .지우기단추 { color:var(--err); }
+  .글자단추 { border:0; background:none; color:var(--accent); font-size:13px; padding:8px 0 0; }
+  .칸제목 { font-size:13px; color:var(--muted); margin:14px 0 6px; }
+  .저장줄 { display:flex; justify-content:flex-end; margin-top:8px; }
+
   #msg { margin-top:16px; font-size:14px; line-height:1.7; }
   .err { color:var(--err); white-space:pre-wrap; font-size:13px; }
   .step { color:var(--muted); }
-  a { color:var(--accent); }
 </style>
 </head>
 <body>
 <main>
   <h1>프로 노트</h1>
   <p class="sub">나의 삶의 프로</p>
-  <button id="login" disabled>구글로 로그인</button>
+  <button id="login" style="display:none">구글로 로그인</button>
   <div id="화면"></div>
   <div id="msg"><div class="step">불러오는 중…</div></div>
 </main>
@@ -46,8 +69,7 @@
   const SCOPE     = 'https://www.googleapis.com/auth/drive.file';
   const SHEET_NAME = '프로 노트 — 기록';
   const MARK_KEY = 'pronote', MARK_VALUE = 'sheet';
-  const 탭 = '계획항목';
-  const 실행초점 = { id:'base_action', 이름:'실행 초점' };
+  const 출입증키 = 'pronote_token';
 
   const TABS = [
     ['로드맵',   ['연도','비전','미션','꿈꾸는 삶의 모습','3년 후','1년 후','수정시각']],
@@ -65,22 +87,34 @@
       ['base_goal','핵심 목표','기본','','','O','O',3,now,'']
     ];
   }
+  // 앱이 읽고 쓰는 칸. 첫 줄에서 이름으로 찾고, 하나라도 없으면 저장하지 않는다 (원칙 6)
+  const 필요칸 = {
+    '영역설정': ['영역ID','이름','일','순서','삭제됨'],
+    '계획항목': ['항목ID','기간 단위','기간','영역ID','영역','주제','계획','평가','이월횟수','순서','수정시각','삭제됨'],
+    '피드백':   ['피드백ID','기간 단위','기간','영역ID','영역','피드백','수정시각','삭제됨'],
+    '일기':     ['일기ID','기간 단위','기간','내용','수정시각','삭제됨']
+  };
+  // 시트에는 한글로, 화면에는 기호로 (설계 5-5)
+  const 평가모양 = [['했다','○'],['일부','△'],['못했다','✕']];
+  const 평가점수 = { '했다':1, '일부':0.5, '못했다':0 };
 
   const loginBtn = document.getElementById('login');
   const 화면 = document.getElementById('화면');
   const msg = document.getElementById('msg');
-  let token = null, tokenClient = null, 시트ID = null, 대기 = null;
+  let token = null, tokenClient = null, 시트ID = null, 받는중 = null;
+  let 보는날 = 자정(new Date());
+  const 안쓴글 = new Map();   // 저장 안 한 글: 칸 열쇠 → 적은 글. 다시 그려도 남긴다
 
   const p2 = n => String(n).padStart(2,'0');
-  function 오늘() { const d=new Date(); return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
-  function 지금() { const d=new Date(); return 오늘()+' '+p2(d.getHours())+':'+p2(d.getMinutes()); }
-  function 오늘표시() {
-    const d=new Date(), 요일='일월화수목금토'[d.getDay()];
-    return d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+요일+')';
-  }
-  function 새번호표(앞) { return 앞 + Math.random().toString(36).slice(2,8); }
+  function 자정(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function 날짜글(d) { return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
+  function 지금() { const d=new Date(); return 날짜글(d)+' '+p2(d.getHours())+':'+p2(d.getMinutes()); }
+  function 날짜표시(d) { return d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+'일월화수목금토'[d.getDay()]+')'; }
+  function 며칠차이(d) { return Math.round((d - 자정(new Date())) / 86400000); }
+  function 새번호표(앞) { return 앞 + Math.random().toString(36).slice(2,8).padEnd(6,'0'); }
   function 알림(text, cls) { msg.innerHTML=''; if(!text) return;
     const d=document.createElement('div'); if(cls) d.className=cls; d.textContent=text; msg.appendChild(d); }
+  function 요소(tag, cls, text) { const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
 
   async function api(url, options, 재시도했나) {
     const opt = Object.assign({}, options || {});
@@ -89,6 +123,7 @@
     const t = await r.text();
     // 출입증은 한 시간쯤 지나면 만료된다. 그때는 조용히 새로 받아 한 번 더 해본다.
     if (r.status === 401 && !재시도했나) {
+      출입증지우기();
       try { await 출입증받기(true); } catch (e) { throw new Error('로그인이 풀렸습니다. 새로고침해 주세요.'); }
       return api(url, options, true);
     }
@@ -98,31 +133,47 @@
   const 시트API = path => 'https://sheets.googleapis.com/v4/spreadsheets/' + 시트ID + path;
 
   // ── 로그인 ──
-  // 구글 로그인에는 두 가지 방식이 있다.
-  //  · 조용히(prompt:'') — 전에 이 앱에 동의한 사람이면 창 없이 바로 출입증을 준다
+  // 받은 출입증은 만료 시각과 함께 브라우저에 둔다. 1시간 안에 새로고침하거나 다시 열면
+  // 그걸 쓰고, 없거나 곧 만료되면 구글에 새로 받는다 (개발결정로그 8h.2).
+  // 새로 받는 방법은 둘이다.
+  //  · 조용히(prompt:'') — 전에 이 앱에 동의한 사람이면 창이 잠깐 떴다 저절로 닫힌다
   //  · 창 띄우기        — 처음이거나 동의가 풀렸을 때
-  // 앱을 열 때 먼저 조용히 해보고, 안 되면 그때만 버튼을 보여준다.
+  function 출입증두기(t, 초) {
+    try { localStorage.setItem(출입증키, JSON.stringify({ t, 만료: Date.now() + 초*1000 })); } catch (e) {}
+  }
+  function 둔출입증() {
+    try {
+      const o = JSON.parse(localStorage.getItem(출입증키) || 'null');
+      if (o && o.t && o.만료 - Date.now() > 5*60*1000) return o.t;   // 5분 넘게 남았을 때만
+    } catch (e) {}
+    return null;
+  }
+  function 출입증지우기() { try { localStorage.removeItem(출입증키); } catch (e) {} }
+
   function 출입증받기(조용히) {
-    return new Promise((성공, 실패) => {
-      대기 = { 성공, 실패, 조용히 };
-      tokenClient.requestAccessToken(조용히 ? { prompt: '' } : {});
-    });
+    if (받는중) return 받는중.약속;   // 이미 받는 중이면 그걸 기다린다
+    let 성공, 실패;
+    const 약속 = new Promise((a, b) => { 성공 = a; 실패 = b; });
+    받는중 = { 약속, 성공, 실패 };
+    tokenClient.requestAccessToken(조용히 ? { prompt: '' } : {});
+    return 약속;
   }
 
   function initGoogle() {
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID, scope: SCOPE,
       callback: resp => {
-        const 요청 = 대기; 대기 = null;
+        const 요청 = 받는중; 받는중 = null;
         if (resp.error) { if (요청) 요청.실패(new Error(resp.error)); return; }
         if (!google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) {
           if (요청) 요청.실패(new Error('권한 미동의')); return;
         }
         token = resp.access_token;
+        출입증두기(token, Number(resp.expires_in) || 3600);
         if (요청) 요청.성공();
       },
       error_callback: err => {
-        const 요청 = 대기; 대기 = null;
+        const 요청 = 받는중; 받는중 = null;
         if (요청) 요청.실패(err || new Error('로그인 실패'));
       }
     });
@@ -131,9 +182,10 @@
 
   async function 자동로그인() {
     알림('불러오는 중…','step');
+    const 둔것 = 둔출입증();
+    if (둔것) { token = 둔것; await 준비(); return; }
     try {
-      await 출입증받기(true);      // 창 없이 시도
-      loginBtn.style.display = 'none';
+      await 출입증받기(true);
       await 준비();
     } catch (e) {
       // 조용히 안 되면 버튼을 보여준다 (처음 쓰는 사람, 또는 브라우저가 막은 경우)
@@ -193,78 +245,287 @@
     return 시트ID;
   }
 
-  // ── 칸은 이름으로 찾는다 (원칙 6). 몇 번째인지 세지 않는다 ──
-  async function 칸자리() {
-    const r = await api(시트API('/values/' + encodeURIComponent("'"+탭+"'!1:1")));
-    const 이름들 = (r.values && r.values[0]) || [];
-    const 자리 = {};
-    이름들.forEach((이름, i) => { 자리[String(이름).trim()] = i; });
-    const 필요 = ['항목ID','기간 단위','기간','영역ID','영역','계획','순서','이월횟수','수정시각','삭제됨'];
-    const 없는칸 = 필요.filter(n => !(n in 자리));
-    if (없는칸.length) throw new Error('「'+탭+'」 탭에서 이 칸을 못 찾았습니다: '+없는칸.join(', ')
-      + '\n칸 이름이 바뀌었을 수 있습니다. 원래 이름으로 되돌려 주세요. (저장하지 않았습니다)');
-    return { 자리, 칸수: 이름들.length };
-  }
-
-  // ── 오늘의 실행 초점 계획을 읽어서 그린다 ──
-  async function 그리기() {
-    const { 자리 } = await 칸자리();
-    const r = await api(시트API('/values/' + encodeURIComponent("'"+탭+"'!A2:ZZ")));
-    const 행들 = r.values || [];
-    const 오늘것 = 행들.filter(행 =>
-      (행[자리['기간 단위']]||'') === '일' &&
-      (행[자리['기간']]||'') === 오늘() &&
-      (행[자리['영역ID']]||'') === 실행초점.id &&
-      !(행[자리['삭제됨']]||'').trim()
-    );
-
-    화면.innerHTML = '';
-    const card = document.createElement('div'); card.className='card';
-    const d1 = document.createElement('div'); d1.className='날짜'; d1.textContent = 오늘표시(); card.appendChild(d1);
-    const d2 = document.createElement('div'); d2.className='영역'; d2.textContent = 실행초점.이름; card.appendChild(d2);
-
-    if (오늘것.length === 0) {
-      const e = document.createElement('div'); e.className='없음'; e.textContent='아직 적은 것이 없습니다.'; card.appendChild(e);
-    } else {
-      const ul = document.createElement('ul');
-      오늘것.forEach(행 => { const li=document.createElement('li'); li.textContent = 행[자리['계획']]||''; ul.appendChild(li); });
-      card.appendChild(ul);
+  // ── 읽기: 탭을 통째로 읽고, 칸은 첫 줄의 이름으로 찾는다 (원칙 6) ──
+  async function 탭읽기(이름들) {
+    const q = 이름들.map(n => 'ranges=' + encodeURIComponent("'"+n+"'!A1:ZZ")).join('&');
+    let r;
+    try { r = await api(시트API('/values:batchGet?' + q)); }
+    catch (e) {
+      if (/Unable to parse range/.test(e.message))
+        throw new Error('시트에서 탭을 못 찾았습니다: ' + 이름들.join(', ')
+          + '\n탭 이름이 바뀌었을 수 있습니다. 원래 이름으로 되돌려 주세요. (저장하지 않았습니다)');
+      throw e;
     }
-
-    const 줄 = document.createElement('div'); 줄.className='입력줄';
-    const inp = document.createElement('input');
-    inp.type='text'; inp.placeholder='오늘 할 일 한 줄'; inp.maxLength=200;
-    const btn = document.createElement('button'); btn.textContent='추가';
-    줄.appendChild(inp); 줄.appendChild(btn); card.appendChild(줄);
-    화면.appendChild(card);
-
-    const 저장 = async () => {
-      const 글 = inp.value.trim();
-      if (!글) { inp.focus(); return; }
-      btn.disabled = true; inp.disabled = true; 알림('저장하는 중…','step');
-      try { await 한줄쓰기(글, 오늘것.length + 1); 알림(''); await 그리기(); }
-      catch (e) { btn.disabled=false; inp.disabled=false; 알림('저장하지 못했습니다.\n'+e.message,'err'); }
-    };
-    btn.addEventListener('click', 저장);
-    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') 저장(); });
+    const 결과 = {};
+    r.valueRanges.forEach((vr, i) => {
+      const 이름 = 이름들[i], 줄들 = vr.values || [], 머리 = 줄들[0] || [];
+      const 자리 = {};
+      머리.forEach((칸, j) => { 자리[String(칸).trim()] = j; });
+      const 없는칸 = (필요칸[이름] || []).filter(n => !(n in 자리));
+      if (없는칸.length) throw new Error('「'+이름+'」 탭에서 이 칸을 못 찾았습니다: '+없는칸.join(', ')
+        + '\n칸 이름이 바뀌었을 수 있습니다. 원래 이름으로 되돌려 주세요. (저장하지 않았습니다)');
+      const 값 = (행, 칸) => String(행[자리[칸]] == null ? '' : 행[자리[칸]]).trim();
+      결과[이름] = { 자리, 칸수: 머리.length, 행들: 줄들.slice(1), 값 };
+    });
+    return 결과;
   }
 
-  // ── 한 줄 쓰기: 맨 아래에 새로 붙인다 (행 위치를 기억하지 않는다 — 원칙 5) ──
-  async function 한줄쓰기(글, 순서) {
-    const { 자리, 칸수 } = await 칸자리();
-    const 행 = new Array(칸수).fill('');
-    행[자리['항목ID']]    = 새번호표('it_');
-    행[자리['기간 단위']] = '일';
-    행[자리['기간']]      = 오늘();
-    행[자리['영역ID']]    = 실행초점.id;
-    행[자리['영역']]      = 실행초점.이름;
-    행[자리['계획']]      = 글;
-    행[자리['이월횟수']]  = 0;
-    행[자리['순서']]      = 순서;
-    행[자리['수정시각']]  = 지금();
+  function 열글자(i) { let s = ''; i++; while (i > 0) { const m = (i-1) % 26; s = String.fromCharCode(65+m) + s; i = Math.floor((i-1)/26); } return s; }
+
+  // ── 쓰기: 쓰기 직전에 다시 읽어서 행을 찾는다. 행 위치를 기억하지 않는다 (원칙 5) ──
+  async function 행찾아쓰기(탭, 찾기, 바꿀것, 없으면붙일것) {
+    const t = (await 탭읽기([탭]))[탭];
+    const i = t.행들.findIndex(행 => 찾기(행, t.값));
+    if (i >= 0) {
+      const 행번호 = i + 2;
+      const data = Object.keys(바꿀것).map(칸 => ({ range:"'"+탭+"'!"+열글자(t.자리[칸])+행번호, values:[[바꿀것[칸]]] }));
+      await api(시트API('/values:batchUpdate'), { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ valueInputOption:'RAW', data }) });
+      return;
+    }
+    if (!없으면붙일것) throw new Error('고칠 줄을 시트에서 못 찾았습니다. 새로고침해 주세요.');
+    await 행붙이기(탭, t, 없으면붙일것(t));
+  }
+
+  async function 행붙이기(탭, t, 값들) {
+    const 행 = new Array(t.칸수).fill('');
+    Object.keys(값들).forEach(칸 => { 행[t.자리[칸]] = 값들[칸]; });
     await api(시트API('/values/' + encodeURIComponent("'"+탭+"'!A1") + ':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS'),
       { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ values:[행] }) });
   }
+
+  // ── 그날의 기록을 모은다 ──
+  async function 모으기(기간) {
+    const 탭들 = await 탭읽기(['영역설정','계획항목','피드백','일기']);
+    const 영 = 탭들['영역설정'], 계 = 탭들['계획항목'], 피 = 탭들['피드백'], 일 = 탭들['일기'];
+    const 살아있나 = (t, 행) => !t.값(행, '삭제됨');
+
+    const 영역들 = 영.행들
+      .filter(행 => 영.값(행,'영역ID') && 영.값(행,'일') === 'O' && 살아있나(영, 행))
+      .map(행 => ({ id: 영.값(행,'영역ID'), 이름: 영.값(행,'이름'), 순서: Number(영.값(행,'순서')) || 0 }))
+      .sort((a, b) => a.순서 - b.순서);
+
+    const 그날 = (t, 행) => t.값(행,'기간 단위') === '일' && t.값(행,'기간') === 기간 && 살아있나(t, 행);
+    const 항목들 = 계.행들.filter(행 => 그날(계, 행)).map(행 => ({
+      id: 계.값(행,'항목ID'), 영역ID: 계.값(행,'영역ID'), 주제: 계.값(행,'주제'), 계획: 계.값(행,'계획'),
+      평가: 계.값(행,'평가'), 이월: Number(계.값(행,'이월횟수')) || 0, 순서: Number(계.값(행,'순서')) || 0
+    })).sort((a, b) => a.순서 - b.순서);
+
+    const 피드백 = {};
+    피.행들.filter(행 => 그날(피, 행)).forEach(행 => {
+      const id = 피.값(행,'영역ID');
+      if (!(id in 피드백)) 피드백[id] = 피.값(행,'피드백');   // 같은 날·영역에 두 줄이면 먼저 것을 쓴다
+    });
+    const 일기줄 = 일.행들.find(행 => 그날(일, 행));
+    return { 영역들, 항목들, 피드백, 일기: 일기줄 ? 일.값(일기줄,'내용') : '' };
+  }
+
+  // ── 그리기 ──
+  async function 그리기() {
+    const 기간 = 날짜글(보는날);
+    알림('불러오는 중…','step');
+    let 자료;
+    try { 자료 = await 모으기(기간); }
+    catch (e) { 알림('기록을 불러오지 못했습니다.\n'+e.message,'err'); return; }
+    if (기간 !== 날짜글(보는날)) return;   // 그사이 다른 날로 넘겼다
+    화면.innerHTML = '';
+    화면.appendChild(날짜카드());
+    자료.영역들.forEach(영역 => 화면.appendChild(영역카드(영역, 자료, 기간)));
+    화면.appendChild(일기카드(자료.일기, 기간));
+    알림('');
+  }
+
+  function 날짜카드() {
+    const card = 요소('div','card');
+    const 줄 = 요소('div','날짜줄');
+    const 앞 = 요소('button','넘김','◀'); 앞.setAttribute('aria-label','전날');
+    const 뒤 = 요소('button','넘김','▶'); 뒤.setAttribute('aria-label','다음 날');
+    const 차이 = 며칠차이(보는날);
+    const 이름표 = {'-1':'어제', '0':'오늘', '1':'내일'}[String(차이)];
+    const 가운데 = 요소('div','날짜', 날짜표시(보는날));
+    if (이름표) 가운데.appendChild(요소('small', null, 이름표));
+    앞.addEventListener('click', () => 날넘기기(-1));
+    뒤.addEventListener('click', () => 날넘기기(1));
+    줄.append(앞, 가운데, 뒤);
+    card.appendChild(줄);
+    if (차이 !== 0) {
+      const 알림줄 = 요소('div','다른날', 차이 < 0 ? '지난날의 기록을 보고 있습니다' : '앞날의 기록을 보고 있습니다');
+      const 오늘로 = 요소('button', null, '오늘로');
+      오늘로.addEventListener('click', () => 날넘기기(0));
+      알림줄.appendChild(오늘로);
+      card.appendChild(알림줄);
+    }
+    return card;
+  }
+
+  function 날넘기기(n) {
+    if (안쓴글.size && !confirm('저장하지 않은 글이 있습니다. 그래도 넘어갈까요?')) return;
+    안쓴글.clear();
+    보는날 = n === 0 ? 자정(new Date()) : new Date(보는날.getFullYear(), 보는날.getMonth(), 보는날.getDate() + n);
+    그리기();
+  }
+
+  function 달성률(항목들) {
+    const 평가한것 = 항목들.filter(h => h.평가 in 평가점수);
+    if (!평가한것.length) return null;   // 하나도 평가 안 했으면 보여주지 않는다 (설계 6장)
+    const 합 = 평가한것.reduce((s, h) => s + 평가점수[h.평가], 0);
+    return Math.round(합 / 항목들.length * 100);   // 미평가도 분모에 넣는다
+  }
+
+  function 영역카드(영역, 자료, 기간) {
+    const card = 요소('div','card');
+    const 항목들 = 자료.항목들.filter(h => h.영역ID === 영역.id);
+    const 머리 = 요소('div','영역머리');
+    머리.appendChild(요소('div','영역이름', 영역.이름));
+    const 률 = 달성률(항목들);
+    if (률 != null) 머리.appendChild(요소('div','달성률', '달성률 ' + 률 + '%'));
+    card.appendChild(머리);
+
+    if (!항목들.length) card.appendChild(요소('div','없음','아직 적은 것이 없습니다.'));
+    else {
+      const ul = 요소('ul');
+      항목들.forEach(h => ul.appendChild(항목줄(h)));
+      card.appendChild(ul);
+    }
+
+    // 항목 추가
+    const 줄 = 요소('div','입력줄');
+    const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200;
+    inp.placeholder = 며칠차이(보는날) === 0 ? '오늘 할 일 한 줄' : '할 일 한 줄';
+    const btn = 요소('button','작은단추','추가');
+    const 추가 = () => 저장하며(async () => {
+      const 글 = inp.value.trim();
+      if (!글) { inp.focus(); return false; }
+      const t = (await 탭읽기(['계획항목']))['계획항목'];
+      const 순서 = t.행들.filter(행 => t.값(행,'기간 단위')==='일' && t.값(행,'기간')===기간 && t.값(행,'영역ID')===영역.id)
+                         .reduce((m, 행) => Math.max(m, Number(t.값(행,'순서')) || 0), 0) + 1;
+      await 행붙이기('계획항목', t, { '항목ID':새번호표('it_'), '기간 단위':'일', '기간':기간, '영역ID':영역.id,
+        '영역':영역.이름, '계획':글, '이월횟수':0, '순서':순서, '수정시각':지금() });
+    }, [inp, btn]);
+    btn.addEventListener('click', 추가);
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 추가(); });
+    줄.append(inp, btn);
+    card.appendChild(줄);
+
+    // 피드백 — 항목이 있거나 이미 쓴 글이 있을 때만 펼친다 (처음 켠 사람의 화면을 가볍게)
+    const 쓴글 = 자료.피드백[영역.id] || '';
+    const 칸 = 글칸(영역.id, '피드백', 쓴글, '오늘 무엇이 잘 됐고 무엇이 막혔나', 글 =>
+      행찾아쓰기('피드백',
+        (행, 값) => 값(행,'기간 단위')==='일' && 값(행,'기간')===기간 && 값(행,'영역ID')===영역.id && !값(행,'삭제됨'),
+        { '피드백':글, '수정시각':지금() },
+        () => ({ '피드백ID':새번호표('fb_'), '기간 단위':'일', '기간':기간, '영역ID':영역.id, '영역':영역.이름,
+                 '피드백':글, '수정시각':지금() })));
+    if (항목들.length || 쓴글 || 안쓴글.has(영역.id)) card.appendChild(칸);
+    else {
+      const 열기 = 요소('button','글자단추','피드백 쓰기');
+      열기.addEventListener('click', () => { 열기.replaceWith(칸); 칸.querySelector('textarea').focus(); });
+      card.appendChild(열기);
+    }
+    return card;
+  }
+
+  function 항목줄(h) {
+    const li = 요소('li');
+    const 줄 = 요소('div','항목줄');
+    const 글 = 요소('div','항목글', h.계획);
+    if (h.주제) 글.appendChild(요소('span','꼬리표', h.주제));
+    if (h.이월) 글.appendChild(요소('span','꼬리표', '이월 ' + h.이월));
+    글.title = '눌러서 고치기';
+    글.addEventListener('click', () => li.replaceWith(항목고치기줄(h, li)));
+
+    const 평가들 = 요소('div','평가들');
+    평가모양.forEach(([값, 기호]) => {
+      const b = 요소('button', h.평가 === 값 ? '골라짐' : null, 기호);
+      b.setAttribute('aria-label', 값);
+      // 이미 고른 것을 다시 누르면 빈 칸(아직 평가 안 함)으로 돌아간다
+      b.addEventListener('click', () => 저장하며(() =>
+        행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id,
+          { '평가': h.평가 === 값 ? '' : 값, '수정시각': 지금() }), [...평가들.children]));
+      평가들.appendChild(b);
+    });
+    줄.append(글, 평가들);
+    li.appendChild(줄);
+    if (h.이월 >= 3) li.appendChild(요소('div','쪼개기','세 번 미뤘습니다. 더 작고 쉬운 단위로 쪼개보세요.'));
+    return li;
+  }
+
+  function 항목고치기줄(h, 원래) {
+    const li = 요소('li');
+    const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200; inp.value = h.계획;
+    const 줄 = 요소('div','입력줄');
+    const 저장 = 요소('button','작은단추','저장');
+    const 지우기 = 요소('button','옅은단추 지우기단추','지우기');
+    const 취소 = 요소('button','옅은단추','취소');
+    저장.addEventListener('click', () => 저장하며(async () => {
+      const 글 = inp.value.trim();
+      if (!글) { inp.focus(); return false; }
+      await 행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id, { '계획':글, '수정시각':지금() });
+    }, [inp, 저장, 지우기, 취소]));
+    // 행을 진짜 지우지 않고 「삭제」 표시만 한다 (설계 5-6)
+    지우기.addEventListener('click', () => {
+      if (!confirm('이 항목을 지울까요?')) return;
+      저장하며(() => 행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id,
+        { '삭제됨':'삭제', '수정시각':지금() }), [inp, 저장, 지우기, 취소]);
+    });
+    취소.addEventListener('click', () => li.replaceWith(원래));
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 저장.click(); });
+    li.appendChild(inp);
+    줄.append(저장, 지우기, 취소);
+    li.appendChild(줄);
+    setTimeout(() => inp.focus(), 0);
+    return li;
+  }
+
+  function 일기카드(쓴글, 기간) {
+    const card = 요소('div','card');
+    card.appendChild(요소('div','영역이름','일기'));
+    card.appendChild(글칸('일기', null, 쓴글, '마음·생각·감정·감사', 글 =>
+      행찾아쓰기('일기',
+        (행, 값) => 값(행,'기간 단위')==='일' && 값(행,'기간')===기간 && !값(행,'삭제됨'),
+        { '내용':글, '수정시각':지금() },
+        () => ({ '일기ID':새번호표('dy_'), '기간 단위':'일', '기간':기간, '내용':글, '수정시각':지금() }))));
+    return card;
+  }
+
+  // 여러 줄 글 칸. 고치면 저장 단추가 살아난다
+  function 글칸(열쇠, 제목, 쓴글, 안내, 저장함수) {
+    const 틀 = 요소('div');
+    if (제목) 틀.appendChild(요소('div','칸제목', 제목));
+    const ta = 요소('textarea'); ta.placeholder = 안내;
+    ta.value = 안쓴글.has(열쇠) ? 안쓴글.get(열쇠) : 쓴글;
+    const 저장줄 = 요소('div','저장줄');
+    const btn = 요소('button','작은단추','저장');
+    const 살피기 = () => {
+      const 바뀜 = ta.value !== 쓴글;
+      btn.disabled = !바뀜;
+      if (바뀜) 안쓴글.set(열쇠, ta.value); else 안쓴글.delete(열쇠);
+    };
+    살피기();
+    ta.addEventListener('input', 살피기);
+    btn.addEventListener('click', () => 저장하며(async () => {
+      await 저장함수(ta.value.trim());
+      안쓴글.delete(열쇠);
+    }, [ta, btn]));
+    저장줄.appendChild(btn);
+    틀.append(ta, 저장줄);
+    return 틀;
+  }
+
+  // 저장하는 동안 손대지 못하게 하고, 실패하면 입력한 것을 화면에 그대로 남긴다 (원칙 3)
+  async function 저장하며(일, 잠글것) {
+    잠글것.forEach(e => e.disabled = true);
+    알림('저장하는 중…','step');
+    try {
+      const 결과 = await 일();
+      if (결과 === false) { 잠글것.forEach(e => e.disabled = false); 알림(''); return; }
+      await 그리기();
+    } catch (e) {
+      잠글것.forEach(el => el.disabled = false);
+      알림('저장하지 못했습니다. 적은 것은 화면에 남아 있습니다.\n' + e.message, 'err');
+    }
+  }
+
+  window.addEventListener('beforeunload', ev => { if (안쓴글.size) { ev.preventDefault(); ev.returnValue = ''; } });
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogle()"></script>
 </body>
