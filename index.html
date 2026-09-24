@@ -560,6 +560,7 @@
     const 참고 = 참고블록(영역, 자료, 보기);
     if (참고) card.appendChild(참고);
 
+    card.appendChild(요소('div','칸제목','계획'));
     // 주제는 쓰는 사람에게만 보인다 — 주제 붙은 항목이 하나라도 있을 때만 묶는다 (개발결정로그 8h.6)
     if (항목들.some(h => h.주제)) {
       const 묶음 = new Map();
