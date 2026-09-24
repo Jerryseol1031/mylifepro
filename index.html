@@ -62,9 +62,13 @@
   .칸제목 { font-size:12px; color:var(--muted); margin:10px 0 4px; }
   .저장줄 { display:flex; justify-content:flex-end; margin-top:6px; }
 
-  #msg { margin-top:12px; font-size:13px; line-height:1.6; }
-  .err { color:var(--err); white-space:pre-wrap; font-size:12px; }
+  #msg { position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:10; width:max-content; max-width:calc(100% - 24px);
+    font-size:13px; line-height:1.5; }
+  #msg > div { padding:7px 14px; border-radius:18px; box-shadow:0 2px 8px rgba(0,0,0,.15); background:#fff; }
+  .err { color:var(--err); white-space:pre-wrap; font-size:12px; border-radius:10px !important; }
+  .err .닫기 { display:block; margin:6px 0 0 auto; border:0; background:none; color:var(--accent); font-size:12px; font-weight:600; padding:0; }
   .step { color:var(--muted); }
+  .ok { color:#fff; background:var(--accent) !important; }
 </style>
 </head>
 <body>
@@ -124,8 +128,15 @@
   function 날짜표시(d) { return d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+'일월화수목금토'[d.getDay()]+')'; }
   function 며칠차이(d) { return Math.round((d - 자정(new Date())) / 86400000); }
   function 새번호표(앞) { return 앞 + Math.random().toString(36).slice(2,8).padEnd(6,'0'); }
-  function 알림(text, cls) { msg.innerHTML=''; if(!text) return;
-    const d=document.createElement('div'); if(cls) d.className=cls; d.textContent=text; msg.appendChild(d); }
+  // 알림은 화면 위쪽에 떠 있다 — 아래에 두면 휴대폰에서 안 보인다. 「저장됨」은 잠깐 떴다 사라진다
+  let 알림타이머 = null;
+  function 알림(text, cls) {
+    clearTimeout(알림타이머); msg.innerHTML = ''; msg.style.display = text ? '' : 'none';
+    if (!text) return;
+    const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = text; msg.appendChild(d);
+    if (cls === 'err') { const x = 요소('button','닫기','닫기'); x.addEventListener('click', () => 알림('')); d.appendChild(x); }
+    if (cls === 'ok') 알림타이머 = setTimeout(() => 알림(''), 1500);
+  }
   function 요소(tag, cls, text) { const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
 
   async function api(url, options, 재시도했나) {
@@ -394,19 +405,49 @@
   }
 
   // ── 그리기 ──
-  async function 그리기() {
-    const 보기 = 지금보기();
+  // 시트에서 읽어 온 것(자료)을 들고 있다가, 손으로 바꾼 것은 화면부터 바로 고치고 저장은 뒤에서 한다.
+  // 기다리는 저장이 끝나기 전에는 새로 읽지 않는다 — 읽으면 아직 안 들어간 것이 사라져 보인다.
+  let 자료 = null, 보기 = null, 다시초점 = null;
+
+  async function 그리기(저장기다리기 = true) {
+    if (저장기다리기) await 저장줄;
+    const 볼것 = 지금보기();
     알림('불러오는 중…','step');
-    let 자료;
-    try { 자료 = await 모으기(보기); }
+    let 읽은것;
+    try { 읽은것 = await 모으기(볼것); }
     catch (e) { 알림('기록을 불러오지 못했습니다.\n'+e.message,'err'); return; }
     const 현재 = 지금보기();
-    if (현재.단위 !== 보기.단위 || 현재.기간 !== 보기.기간) return;   // 그사이 다른 기간으로 넘겼다
+    if (현재.단위 !== 볼것.단위 || 현재.기간 !== 볼것.기간) return;   // 그사이 다른 기간으로 넘겼다
+    자료 = 읽은것; 보기 = 볼것;
+    화면그리기();
+    알림('');
+  }
+
+  function 화면그리기() {
     화면.innerHTML = '';
     화면.appendChild(날짜카드(보기));
     자료.영역들.forEach(영역 => 화면.appendChild(영역카드(영역, 자료, 보기)));
     화면.appendChild(일기카드(자료.일기, 보기));
-    알림('');
+    if (다시초점) { const 칸 = 화면.querySelector('[data-추가="'+다시초점+'"]'); if (칸) 칸.focus({ preventScroll:true }); 다시초점 = null; }
+  }
+
+  // 저장은 한 줄로 세워 차례로 한다 (빨리 여러 번 눌러도 순서가 섞이지 않게).
+  // 실패하면 시트를 다시 읽어 화면을 사실대로 되돌리고 크게 알린다 (원칙 3).
+  let 저장줄 = Promise.resolve(), 남은저장 = 0, 저장실패 = null, 실패덧글 = [];
+  function 저장하기(일, 실패하면) {
+    남은저장++;
+    알림('저장하는 중…','step');
+    저장줄 = 저장줄.then(async () => {
+      try { await 일(); }
+      catch (e) { const 덧 = 실패하면 && 실패하면(); if (덧) 실패덧글.push(덧); 저장실패 = 저장실패 || e; }
+      남은저장--;
+      if (남은저장 > 0) return;
+      if (저장실패) {
+        const e = 저장실패, 덧 = 실패덧글.join('\n'); 저장실패 = null; 실패덧글 = [];
+        await 그리기(false);
+        알림('저장하지 못했습니다. 화면을 시트 기준으로 되돌렸습니다.' + (덧 ? '\n' + 덧 : '') + '\n' + e.message, 'err');
+      } else 알림('저장됨 ✓','ok');
+    });
   }
 
   function 날짜카드(보기) {
@@ -534,18 +575,25 @@
 
     // 항목 추가
     const 줄 = 요소('div','입력줄');
+    const 추가열쇠 = '추가:' + 영역.id;
     const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200;
-    inp.placeholder = 보기.지금인가 ? (보기.단위 === '일' ? '오늘 할 일 한 줄' : '이번 주 할 일 한 줄') : '할 일 한 줄';
+    inp.dataset.추가 = 영역.id;
+    inp.value = 안쓴글.get(추가열쇠) || '';
+    inp.addEventListener('input', () => { inp.value.trim() ? 안쓴글.set(추가열쇠, inp.value) : 안쓴글.delete(추가열쇠); });
     const btn = 요소('button','작은단추','추가');
-    const 추가 = () => 저장하며(async () => {
+    const 추가 = () => {
       const 글 = inp.value.trim();
-      if (!글) { inp.focus(); return false; }
-      const t = (await 탭읽기(['계획항목']))['계획항목'];
-      const 순서 = t.행들.filter(행 => t.값(행,'기간 단위')===보기.단위 && t.값(행,'기간')===보기.기간 && t.값(행,'영역ID')===영역.id)
-                         .reduce((m, 행) => Math.max(m, Number(t.값(행,'순서')) || 0), 0) + 1;
-      await 행붙이기('계획항목', t, { '항목ID':새번호표('it_'), '기간 단위':보기.단위, '기간':보기.기간, '영역ID':영역.id,
-        '영역':영역.이름, '계획':글, '이월횟수':0, '순서':순서, '수정시각':지금() });
-    }, [inp, btn]);
+      if (!글) { inp.focus(); return; }
+      const h = { id: 새번호표('it_'), 영역ID: 영역.id, 주제: '', 계획: 글, 평가: '', 이월: 0,
+        순서: 자료.항목들.filter(x => x.영역ID === 영역.id).reduce((m, x) => Math.max(m, x.순서), 0) + 1 };
+      const 단 = 보기.단위, 간 = 보기.기간;
+      자료.항목들.push(h); 안쓴글.delete(추가열쇠); 다시초점 = 영역.id; 화면그리기();
+      저장하기(async () => {
+        const t = (await 탭읽기(['계획항목']))['계획항목'];
+        await 행붙이기('계획항목', t, { '항목ID':h.id, '기간 단위':단, '기간':간, '영역ID':영역.id,
+          '영역':영역.이름, '계획':글, '이월횟수':0, '순서':h.순서, '수정시각':지금() });
+      }, () => { 안쓴글.set(추가열쇠, 글); });   // 실패하면 적은 글을 입력칸에 되돌린다
+    };
     btn.addEventListener('click', 추가);
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 추가(); });
     줄.append(inp, btn);
@@ -553,12 +601,15 @@
 
     // 피드백 — 항목이 있거나 이미 쓴 글이 있을 때만 펼친다 (처음 켠 사람의 화면을 가볍게)
     const 쓴글 = 자료.피드백[영역.id] || '';
-    const 칸 = 글칸(영역.id, '피드백', 쓴글, '무엇이 잘 됐고 무엇이 막혔나', 글 =>
-      행찾아쓰기('피드백',
-        (행, 값) => 값(행,'기간 단위')===보기.단위 && 값(행,'기간')===보기.기간 && 값(행,'영역ID')===영역.id && !값(행,'삭제됨'),
+    const 단 = 보기.단위, 간 = 보기.기간;
+    const 칸 = 글칸(영역.id, '피드백', 쓴글, '무엇이 잘 됐고 무엇이 막혔나', 글 => {
+      자료.피드백[영역.id] = 글;
+      return () => 행찾아쓰기('피드백',
+        (행, 값) => 값(행,'기간 단위')===단 && 값(행,'기간')===간 && 값(행,'영역ID')===영역.id && !값(행,'삭제됨'),
         { '피드백':글, '수정시각':지금() },
-        () => ({ '피드백ID':새번호표('fb_'), '기간 단위':보기.단위, '기간':보기.기간, '영역ID':영역.id, '영역':영역.이름,
-                 '피드백':글, '수정시각':지금() })));
+        () => ({ '피드백ID':새번호표('fb_'), '기간 단위':단, '기간':간, '영역ID':영역.id, '영역':영역.이름,
+                 '피드백':글, '수정시각':지금() }));
+    });
     if (항목들.length || 쓴글 || 안쓴글.has(영역.id)) card.appendChild(칸);
     else {
       const 열기 = 요소('button','글자단추','피드백 쓰기');
@@ -582,9 +633,11 @@
       const b = 요소('button', h.평가 === 값 ? '골라짐' : null, 기호글);
       b.setAttribute('aria-label', 값);
       // 이미 고른 것을 다시 누르면 빈 칸(아직 평가 안 함)으로 돌아간다
-      b.addEventListener('click', () => 저장하며(() =>
-        행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id,
-          { '평가': h.평가 === 값 ? '' : 값, '수정시각': 지금() }), [...평가들.children]));
+      b.addEventListener('click', () => {
+        const 새값 = h.평가 === 값 ? '' : 값;
+        h.평가 = 새값; 화면그리기();
+        저장하기(() => 행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id, { '평가': 새값, '수정시각': 지금() }));
+      });
       평가들.appendChild(b);
     });
     줄.append(글, 평가들);
@@ -600,16 +653,19 @@
     const 저장 = 요소('button','작은단추','저장');
     const 지우기 = 요소('button','옅은단추 지우기단추','지우기');
     const 취소 = 요소('button','옅은단추','취소');
-    저장.addEventListener('click', () => 저장하며(async () => {
+    저장.addEventListener('click', () => {
       const 글 = inp.value.trim();
-      if (!글) { inp.focus(); return false; }
-      await 행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id, { '계획':글, '수정시각':지금() });
-    }, [inp, 저장, 지우기, 취소]));
+      if (!글) { inp.focus(); return; }
+      const 옛글 = h.계획;
+      h.계획 = 글; 화면그리기();
+      저장하기(() => 행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id, { '계획':글, '수정시각':지금() }),
+        () => '고치려던 글: ' + 글 + ' (원래: ' + 옛글 + ')');
+    });
     // 행을 진짜 지우지 않고 「삭제」 표시만 한다 (설계 5-6)
     지우기.addEventListener('click', () => {
       if (!confirm('이 항목을 지울까요?')) return;
-      저장하며(() => 행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id,
-        { '삭제됨':'삭제', '수정시각':지금() }), [inp, 저장, 지우기, 취소]);
+      자료.항목들 = 자료.항목들.filter(x => x !== h); 화면그리기();
+      저장하기(() => 행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id, { '삭제됨':'삭제', '수정시각':지금() }));
     });
     취소.addEventListener('click', () => li.replaceWith(원래));
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 저장.click(); });
@@ -623,21 +679,25 @@
   function 일기카드(쓴글, 보기) {
     const card = 요소('div','card');
     card.appendChild(요소('div','영역이름','일기'));
-    card.appendChild(글칸('일기', null, 쓴글, '마음·생각·감정·감사', 글 =>
-      행찾아쓰기('일기',
-        (행, 값) => 값(행,'기간 단위')===보기.단위 && 값(행,'기간')===보기.기간 && !값(행,'삭제됨'),
+    const 단 = 보기.단위, 간 = 보기.기간;
+    card.appendChild(글칸('일기', null, 쓴글, '마음·생각·감정·감사', 글 => {
+      자료.일기 = 글;
+      return () => 행찾아쓰기('일기',
+        (행, 값) => 값(행,'기간 단위')===단 && 값(행,'기간')===간 && !값(행,'삭제됨'),
         { '내용':글, '수정시각':지금() },
-        () => ({ '일기ID':새번호표('dy_'), '기간 단위':보기.단위, '기간':보기.기간, '내용':글, '수정시각':지금() }))));
+        () => ({ '일기ID':새번호표('dy_'), '기간 단위':단, '기간':간, '내용':글, '수정시각':지금() }));
+    }));
     return card;
   }
 
-  // 여러 줄 글 칸. 고치면 저장 단추가 살아난다
+  // 여러 줄 글 칸. 고치면 저장 단추가 살아나고, 저장하면 다시 흐려진다.
+  // 저장함수는 화면 자료를 고친 뒤, 시트에 쓸 일을 돌려준다
   function 글칸(열쇠, 제목, 쓴글, 안내, 저장함수) {
     const 틀 = 요소('div');
     if (제목) 틀.appendChild(요소('div','칸제목', 제목));
     const ta = 요소('textarea'); ta.placeholder = 안내;
     ta.value = 안쓴글.has(열쇠) ? 안쓴글.get(열쇠) : 쓴글;
-    const 저장줄 = 요소('div','저장줄');
+    const 단추줄 = 요소('div','저장줄');
     const btn = 요소('button','작은단추','저장');
     const 살피기 = () => {
       const 바뀜 = ta.value !== 쓴글;
@@ -646,30 +706,19 @@
     };
     살피기();
     ta.addEventListener('input', 살피기);
-    btn.addEventListener('click', () => 저장하며(async () => {
-      await 저장함수(ta.value.trim());
-      안쓴글.delete(열쇠);
-    }, [ta, btn]));
-    저장줄.appendChild(btn);
-    틀.append(ta, 저장줄);
+    btn.addEventListener('click', () => {
+      const 글 = ta.value.trim();
+      const 쓸일 = 저장함수(글);
+      안쓴글.delete(열쇠); 화면그리기();
+      저장하기(쓸일, () => { 안쓴글.set(열쇠, 글); });   // 실패하면 적은 글을 칸에 되돌린다
+    });
+    단추줄.appendChild(btn);
+    틀.append(ta, 단추줄);
     return 틀;
   }
 
-  // 저장하는 동안 손대지 못하게 하고, 실패하면 입력한 것을 화면에 그대로 남긴다 (원칙 3)
-  async function 저장하며(일, 잠글것) {
-    잠글것.forEach(e => e.disabled = true);
-    알림('저장하는 중…','step');
-    try {
-      const 결과 = await 일();
-      if (결과 === false) { 잠글것.forEach(e => e.disabled = false); 알림(''); return; }
-      await 그리기();
-    } catch (e) {
-      잠글것.forEach(el => el.disabled = false);
-      알림('저장하지 못했습니다. 적은 것은 화면에 남아 있습니다.\n' + e.message, 'err');
-    }
-  }
-
-  window.addEventListener('beforeunload', ev => { if (안쓴글.size) { ev.preventDefault(); ev.returnValue = ''; } });
+  // 저장 중이거나 저장 안 한 글이 있으면 떠나기 전에 묻는다
+  window.addEventListener('beforeunload', ev => { if (안쓴글.size || 남은저장) { ev.preventDefault(); ev.returnValue = ''; } });
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogle()"></script>
 </body>
