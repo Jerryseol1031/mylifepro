@@ -5,60 +5,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>프로 노트</title>
 <style>
-  :root { --bg:#f7f6f3; --fg:#1f1f1f; --muted:#6b6b6b; --line:#e5e3de; --accent:#2f5d50; --soft:#e8efe9; --err:#b3261e; --warn:#8a5a00; }
+  :root { --bg:#f7f6f3; --fg:#1f1f1f; --muted:#6b6b6b; --line:#e5e3de; --accent:#2f5d50; --soft:#eef3ef; --err:#b3261e; --warn:#8a5a00; }
   * { box-sizing:border-box; }
-  body { margin:0; min-height:100vh; background:var(--bg); color:var(--fg);
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--fg); font-size:14px;
     font-family:-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; }
-  main { max-width:460px; margin:0 auto; padding:28px 16px 80px; }
-  h1 { font-size:24px; margin:0 0 4px; letter-spacing:-0.5px; }
-  .sub { color:var(--muted); margin:0 0 20px; font-size:14px; }
+  main { max-width:460px; margin:0 auto; padding:16px 12px 72px; }
+  h1 { font-size:19px; margin:0; letter-spacing:-0.5px; display:inline; }
+  .sub { color:var(--muted); font-size:12px; margin-left:6px; }
+  header { margin-bottom:10px; }
   button { font-family:inherit; cursor:pointer; }
-  #login { width:100%; padding:15px; font-size:16px; font-weight:600; border:0; border-radius:12px; background:var(--accent); color:#fff; }
+  #login { width:100%; margin-top:12px; padding:13px; font-size:15px; font-weight:600; border:0; border-radius:10px; background:var(--accent); color:#fff; }
   button:disabled { opacity:.5; cursor:default; }
-  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; margin-top:14px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px; }
 
+  .단위들 { display:flex; background:var(--bg); border-radius:9px; padding:3px; margin-bottom:10px; }
+  .단위들 button { flex:1; border:0; background:none; padding:6px 0; border-radius:7px; font-size:13px; color:var(--muted); }
+  .단위들 button.골라짐 { background:#fff; color:var(--fg); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.08); }
   .날짜줄 { display:flex; align-items:center; gap:8px; }
-  .날짜줄 .넘김 { width:40px; height:40px; flex:none; border:1px solid var(--line); border-radius:10px; background:#fff; font-size:16px; color:var(--fg); }
-  .날짜 { flex:1; text-align:center; font-size:17px; font-weight:600; }
-  .날짜 small { display:block; font-size:12px; font-weight:500; color:var(--muted); margin-top:2px; }
-  .다른날 { margin-top:10px; padding:8px 12px; border-radius:10px; background:#fff4e0; color:var(--warn); font-size:13px; display:flex; justify-content:space-between; align-items:center; }
-  .다른날 button { border:0; background:none; color:var(--accent); font-weight:600; font-size:13px; padding:0; }
+  .날짜줄 .넘김 { width:34px; height:34px; flex:none; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:13px; color:var(--fg); }
+  .날짜 { flex:1; text-align:center; font-size:15px; font-weight:600; }
+  .날짜 small { display:block; font-size:11px; font-weight:500; color:var(--muted); margin-top:1px; }
+  .다른날 { margin-top:8px; padding:6px 10px; border-radius:8px; background:#fff4e0; color:var(--warn); font-size:12px; display:flex; justify-content:space-between; align-items:center; }
+  .다른날 button { border:0; background:none; color:var(--accent); font-weight:600; font-size:12px; padding:0; }
 
   .영역머리 { display:flex; justify-content:space-between; align-items:baseline; }
-  .영역이름 { font-size:15px; font-weight:700; }
-  .달성률 { font-size:13px; color:var(--accent); font-weight:600; }
-  ul { list-style:none; margin:8px 0 0; padding:0; }
-  li { padding:10px 0; border-bottom:1px solid var(--line); }
+  .영역이름 { font-size:14px; font-weight:700; }
+  .달성률 { font-size:12px; color:var(--accent); font-weight:600; }
+
+  .참고 { margin-top:8px; background:var(--soft); border-radius:8px; padding:6px 10px; font-size:12px; color:#3d4a44; }
+  .참고머리 { display:flex; gap:6px; align-items:center; border:0; background:none; padding:2px 0; width:100%; text-align:left; font-size:12px; color:var(--accent); font-weight:600; }
+  .참고머리 span { color:var(--muted); font-weight:400; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .참고제목 { font-weight:600; color:var(--muted); margin:6px 0 2px; }
+  .참고줄 { line-height:1.55; padding-left:2px; }
+  .참고줄 b { display:inline-block; width:14px; font-weight:400; color:var(--muted); }
+
+  .주제 { font-size:11px; color:var(--muted); font-weight:600; margin:10px 0 0; }
+  ul { list-style:none; margin:4px 0 0; padding:0; }
+  li { padding:6px 0; border-bottom:1px solid var(--line); }
   li:last-child { border-bottom:0; }
-  .항목줄 { display:flex; align-items:center; gap:8px; }
-  .항목글 { flex:1; min-width:0; font-size:15px; line-height:1.5; word-break:break-word; cursor:pointer; }
-  .꼬리표 { display:inline-block; font-size:11px; color:var(--muted); border:1px solid var(--line); border-radius:6px; padding:0 5px; margin-left:4px; vertical-align:1px; }
-  .평가들 { display:flex; gap:4px; flex:none; }
-  .평가들 button { width:34px; height:34px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--muted); font-size:15px; padding:0; }
+  .항목줄 { display:flex; align-items:center; gap:6px; }
+  .항목글 { flex:1; min-width:0; font-size:14px; line-height:1.45; word-break:break-word; cursor:pointer; }
+  .꼬리표 { display:inline-block; font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:5px; padding:0 4px; margin-left:4px; vertical-align:1px; }
+  .평가들 { display:flex; gap:3px; flex:none; }
+  .평가들 button { width:30px; height:30px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--muted); font-size:13px; padding:0; }
   .평가들 button.골라짐 { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .쪼개기 { font-size:12px; color:var(--warn); margin-top:4px; }
-  .없음 { color:var(--muted); font-size:14px; padding:8px 0 2px; }
+  .쪼개기 { font-size:11px; color:var(--warn); margin-top:3px; }
 
-  .입력줄 { display:flex; gap:8px; margin-top:10px; }
-  input[type=text], textarea { flex:1; min-width:0; width:100%; padding:12px; font-size:15px; border:1px solid var(--line);
-    border-radius:10px; background:#fff; color:var(--fg); font-family:inherit; }
-  textarea { resize:vertical; min-height:72px; line-height:1.5; display:block; }
-  .작은단추 { padding:0 16px; min-height:44px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-size:15px; font-weight:600; flex:none; }
-  .옅은단추 { padding:0 12px; min-height:44px; border:1px solid var(--line); border-radius:10px; background:#fff; color:var(--fg); font-size:14px; flex:none; }
+  .입력줄 { display:flex; gap:6px; margin-top:8px; }
+  input[type=text], textarea { flex:1; min-width:0; width:100%; padding:9px 10px; font-size:14px; border:1px solid var(--line);
+    border-radius:8px; background:#fff; color:var(--fg); font-family:inherit; }
+  textarea { resize:vertical; min-height:56px; line-height:1.45; display:block; }
+  .작은단추 { padding:0 14px; min-height:38px; border:0; border-radius:8px; background:var(--accent); color:#fff; font-size:14px; font-weight:600; flex:none; }
+  .옅은단추 { padding:0 10px; min-height:38px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--fg); font-size:13px; flex:none; }
   .지우기단추 { color:var(--err); }
-  .글자단추 { border:0; background:none; color:var(--accent); font-size:13px; padding:8px 0 0; }
-  .칸제목 { font-size:13px; color:var(--muted); margin:14px 0 6px; }
-  .저장줄 { display:flex; justify-content:flex-end; margin-top:8px; }
+  .글자단추 { border:0; background:none; color:var(--accent); font-size:12px; padding:8px 0 0; }
+  .칸제목 { font-size:12px; color:var(--muted); margin:10px 0 4px; }
+  .저장줄 { display:flex; justify-content:flex-end; margin-top:6px; }
 
-  #msg { margin-top:16px; font-size:14px; line-height:1.7; }
-  .err { color:var(--err); white-space:pre-wrap; font-size:13px; }
+  #msg { margin-top:12px; font-size:13px; line-height:1.6; }
+  .err { color:var(--err); white-space:pre-wrap; font-size:12px; }
   .step { color:var(--muted); }
 </style>
 </head>
 <body>
 <main>
-  <h1>프로 노트</h1>
-  <p class="sub">나의 삶의 프로</p>
+  <header><h1>프로 노트</h1><span class="sub">나의 삶의 프로</span></header>
   <button id="login" style="display:none">구글로 로그인</button>
   <div id="화면"></div>
   <div id="msg"><div class="step">불러오는 중…</div></div>
@@ -89,7 +100,7 @@
   }
   // 앱이 읽고 쓰는 칸. 첫 줄에서 이름으로 찾고, 하나라도 없으면 저장하지 않는다 (원칙 6)
   const 필요칸 = {
-    '영역설정': ['영역ID','이름','일','순서','삭제됨'],
+    '영역설정': ['영역ID','이름','일','주','순서','삭제됨'],
     '계획항목': ['항목ID','기간 단위','기간','영역ID','영역','주제','계획','평가','이월횟수','순서','수정시각','삭제됨'],
     '피드백':   ['피드백ID','기간 단위','기간','영역ID','영역','피드백','수정시각','삭제됨'],
     '일기':     ['일기ID','기간 단위','기간','내용','수정시각','삭제됨']
@@ -102,7 +113,8 @@
   const 화면 = document.getElementById('화면');
   const msg = document.getElementById('msg');
   let token = null, tokenClient = null, 시트ID = null, 받는중 = null;
-  let 보는날 = 자정(new Date());
+  let 단위 = '일';               // 보고 있는 회고: '일' 또는 '주'
+  let 보는날 = 자정(new Date());   // 주간일 때는 이 날이 든 주를 본다
   const 안쓴글 = new Map();   // 저장 안 한 글: 칸 열쇠 → 적은 글. 다시 그려도 남긴다
 
   const p2 = n => String(n).padStart(2,'0');
@@ -294,74 +306,147 @@
       { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ values:[행] }) });
   }
 
-  // ── 그날의 기록을 모은다 ──
-  async function 모으기(기간) {
+  // ── 기간 규칙 (설계 5-8) ──
+  // 그 달의 4일이 든 주(월~일)가 그 달의 첫 주다. 분기는 1·4·7·10월 첫 주에서 시작하고,
+  // 12주를 넘는 주는 재정비 주간(R)이다.
+  const 하루 = 86400000;
+  function 월요일(d) { const x = 자정(d); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; }
+  function 분기시작(연, q) { return 월요일(new Date(연, (q-1)*3, 4)); }
+  function 분기찾기(d) {
+    const x = 자정(d);
+    let 연 = x.getFullYear() + 1, q = 1;
+    for (let k = 0; k < 6; k++) {   // 다음 해 1분기부터 거꾸로 훑는다
+      const 시작 = 분기시작(연, q);
+      if (시작 <= x) return { 연, q, 시작, 끝: q === 4 ? 분기시작(연+1, 1) : 분기시작(연, q+1) };
+      if (--q === 0) { q = 4; 연--; }
+    }
+  }
+  function 주정보(d) {
+    const 분 = 분기찾기(d), 월 = 월요일(d);
+    const n = Math.round((월 - 분.시작) / (7*하루)) + 1;
+    const 재정비수 = Math.round((분.끝 - 분.시작) / (7*하루)) - 12;
+    const 재정비 = n > 12, 번호 = 재정비 ? n - 12 : n;
+    const 일요일 = new Date(월.getFullYear(), 월.getMonth(), 월.getDate() + 6);
+    return {
+      기간: 분.연 + '-Q' + 분.q + '-' + (재정비 ? 'R' + 번호 : 'W' + p2(번호)),
+      이름: 분.q + '분기 ' + (재정비 ? '재정비 주간' + (재정비수 > 1 ? ' ' + 번호 + '/' + 재정비수 : '') : 번호 + '주차'),
+      연: 분.연, 분기: 분.연 + '-Q' + 분.q, 월요일: 월,
+      범위: (월.getMonth()+1) + '/' + 월.getDate() + ' ~ ' + (일요일.getMonth()+1) + '/' + 일요일.getDate()
+    };
+  }
+  function 짧은날짜(d) { return (d.getMonth()+1) + '월 ' + d.getDate() + '일 (' + '일월화수목금토'[d.getDay()] + ')'; }
+  function 하루뒤(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+
+  // 지금 보는 기간과, 그 화면이 참고로 띄울 상위 기간·지난 기간 (설계 6장 「참고」)
+  function 지금보기() {
+    const 오늘 = 자정(new Date());
+    if (단위 === '일') {
+      const 주 = 주정보(보는날), 전날 = 하루뒤(보는날, -1);
+      return { 단위:'일', 기간: 날짜글(보는날), 제목: 날짜표시(보는날),
+        꼬리: {'-1':'어제', '0':'오늘', '1':'내일'}[String(며칠차이(보는날))] || '',
+        지금인가: 며칠차이(보는날) === 0, 안내: '할 일 한 줄',
+        상위: { 단위:'주', 기간: 주.기간, 이름: '주간 계획 · ' + 주.이름 },
+        지난: { 단위:'일', 기간: 날짜글(전날), 이름: '전날 · ' + 짧은날짜(전날) } };
+    }
+    const 주 = 주정보(보는날), 전주 = 주정보(하루뒤(보는날, -7));
+    const 차이 = Math.round((주.월요일 - 월요일(오늘)) / (7*하루));
+    return { 단위:'주', 기간: 주.기간, 제목: 주.연 + '년 ' + 주.이름,
+      꼬리: 주.범위 + ({'-1':' · 지난주', '0':' · 이번 주', '1':' · 다음 주'}[String(차이)] || ''),
+      지금인가: 차이 === 0, 안내: '이번 주 할 일 한 줄',
+      상위: { 단위:'분기', 기간: 주.분기, 이름: '분기 계획 · ' + 주.연 + '년 ' + 주.분기.slice(-1) + '분기' },
+      지난: { 단위:'주', 기간: 전주.기간, 이름: '전주 · ' + 전주.이름 } };
+  }
+
+  // ── 그 기간의 기록을 모은다 (참고할 상위·지난 기간까지 한 번에 읽는다) ──
+  async function 모으기(보기) {
     const 탭들 = await 탭읽기(['영역설정','계획항목','피드백','일기']);
     const 영 = 탭들['영역설정'], 계 = 탭들['계획항목'], 피 = 탭들['피드백'], 일 = 탭들['일기'];
     const 살아있나 = (t, 행) => !t.값(행, '삭제됨');
+    const 그기간 = (t, 행, 단, 간) => t.값(행,'기간 단위') === 단 && t.값(행,'기간') === 간 && 살아있나(t, 행);
 
     const 영역들 = 영.행들
-      .filter(행 => 영.값(행,'영역ID') && 영.값(행,'일') === 'O' && 살아있나(영, 행))
+      .filter(행 => 영.값(행,'영역ID') && 영.값(행, 보기.단위) === 'O' && 살아있나(영, 행))
       .map(행 => ({ id: 영.값(행,'영역ID'), 이름: 영.값(행,'이름'), 순서: Number(영.값(행,'순서')) || 0 }))
       .sort((a, b) => a.순서 - b.순서);
 
-    const 그날 = (t, 행) => t.값(행,'기간 단위') === '일' && t.값(행,'기간') === 기간 && 살아있나(t, 행);
-    const 항목들 = 계.행들.filter(행 => 그날(계, 행)).map(행 => ({
+    const 항목모으기 = (단, 간) => 계.행들.filter(행 => 그기간(계, 행, 단, 간)).map(행 => ({
       id: 계.값(행,'항목ID'), 영역ID: 계.값(행,'영역ID'), 주제: 계.값(행,'주제'), 계획: 계.값(행,'계획'),
       평가: 계.값(행,'평가'), 이월: Number(계.값(행,'이월횟수')) || 0, 순서: Number(계.값(행,'순서')) || 0
     })).sort((a, b) => a.순서 - b.순서);
-
-    const 피드백 = {};
-    피.행들.filter(행 => 그날(피, 행)).forEach(행 => {
-      const id = 피.값(행,'영역ID');
-      if (!(id in 피드백)) 피드백[id] = 피.값(행,'피드백');   // 같은 날·영역에 두 줄이면 먼저 것을 쓴다
-    });
-    const 일기줄 = 일.행들.find(행 => 그날(일, 행));
-    return { 영역들, 항목들, 피드백, 일기: 일기줄 ? 일.값(일기줄,'내용') : '' };
+    const 피드백모으기 = (단, 간) => {
+      const 결과 = {};
+      피.행들.filter(행 => 그기간(피, 행, 단, 간)).forEach(행 => {
+        const id = 피.값(행,'영역ID');
+        if (!(id in 결과)) 결과[id] = 피.값(행,'피드백');   // 같은 기간·영역에 두 줄이면 먼저 것을 쓴다
+      });
+      return 결과;
+    };
+    const 일기줄 = 일.행들.find(행 => 그기간(일, 행, 보기.단위, 보기.기간));
+    return {
+      영역들,
+      항목들: 항목모으기(보기.단위, 보기.기간),
+      피드백: 피드백모으기(보기.단위, 보기.기간),
+      일기: 일기줄 ? 일.값(일기줄,'내용') : '',
+      상위항목: 항목모으기(보기.상위.단위, 보기.상위.기간),
+      지난항목: 항목모으기(보기.지난.단위, 보기.지난.기간),
+      지난피드백: 피드백모으기(보기.지난.단위, 보기.지난.기간)
+    };
   }
 
   // ── 그리기 ──
   async function 그리기() {
-    const 기간 = 날짜글(보는날);
+    const 보기 = 지금보기();
     알림('불러오는 중…','step');
     let 자료;
-    try { 자료 = await 모으기(기간); }
+    try { 자료 = await 모으기(보기); }
     catch (e) { 알림('기록을 불러오지 못했습니다.\n'+e.message,'err'); return; }
-    if (기간 !== 날짜글(보는날)) return;   // 그사이 다른 날로 넘겼다
+    const 현재 = 지금보기();
+    if (현재.단위 !== 보기.단위 || 현재.기간 !== 보기.기간) return;   // 그사이 다른 기간으로 넘겼다
     화면.innerHTML = '';
-    화면.appendChild(날짜카드());
-    자료.영역들.forEach(영역 => 화면.appendChild(영역카드(영역, 자료, 기간)));
-    화면.appendChild(일기카드(자료.일기, 기간));
+    화면.appendChild(날짜카드(보기));
+    자료.영역들.forEach(영역 => 화면.appendChild(영역카드(영역, 자료, 보기)));
+    화면.appendChild(일기카드(자료.일기, 보기));
     알림('');
   }
 
-  function 날짜카드() {
+  function 날짜카드(보기) {
     const card = 요소('div','card');
+    const 단위들 = 요소('div','단위들');
+    [['일','일간'],['주','주간']].forEach(([값, 글]) => {
+      const b = 요소('button', 단위 === 값 ? '골라짐' : null, 글);
+      b.addEventListener('click', () => { if (단위 !== 값 && 넘겨도되나()) { 단위 = 값; 그리기(); } });
+      단위들.appendChild(b);
+    });
+    card.appendChild(단위들);
+
     const 줄 = 요소('div','날짜줄');
-    const 앞 = 요소('button','넘김','◀'); 앞.setAttribute('aria-label','전날');
-    const 뒤 = 요소('button','넘김','▶'); 뒤.setAttribute('aria-label','다음 날');
-    const 차이 = 며칠차이(보는날);
-    const 이름표 = {'-1':'어제', '0':'오늘', '1':'내일'}[String(차이)];
-    const 가운데 = 요소('div','날짜', 날짜표시(보는날));
-    if (이름표) 가운데.appendChild(요소('small', null, 이름표));
-    앞.addEventListener('click', () => 날넘기기(-1));
-    뒤.addEventListener('click', () => 날넘기기(1));
+    const 앞 = 요소('button','넘김','◀'); 앞.setAttribute('aria-label', 단위 === '일' ? '전날' : '전주');
+    const 뒤 = 요소('button','넘김','▶'); 뒤.setAttribute('aria-label', 단위 === '일' ? '다음 날' : '다음 주');
+    const 가운데 = 요소('div','날짜', 보기.제목);
+    if (보기.꼬리) 가운데.appendChild(요소('small', null, 보기.꼬리));
+    앞.addEventListener('click', () => 넘기기(-1));
+    뒤.addEventListener('click', () => 넘기기(1));
     줄.append(앞, 가운데, 뒤);
     card.appendChild(줄);
-    if (차이 !== 0) {
-      const 알림줄 = 요소('div','다른날', 차이 < 0 ? '지난날의 기록을 보고 있습니다' : '앞날의 기록을 보고 있습니다');
-      const 오늘로 = 요소('button', null, '오늘로');
-      오늘로.addEventListener('click', () => 날넘기기(0));
+    if (!보기.지금인가) {
+      const 과거 = 보기.단위 === '일' ? 며칠차이(보는날) < 0 : 월요일(보는날) < 월요일(new Date());
+      const 알림줄 = 요소('div','다른날', 과거 ? '지난 기록을 보고 있습니다' : '앞날의 기록을 보고 있습니다');
+      const 오늘로 = 요소('button', null, 단위 === '일' ? '오늘로' : '이번 주로');
+      오늘로.addEventListener('click', () => 넘기기(0));
       알림줄.appendChild(오늘로);
       card.appendChild(알림줄);
     }
     return card;
   }
 
-  function 날넘기기(n) {
-    if (안쓴글.size && !confirm('저장하지 않은 글이 있습니다. 그래도 넘어갈까요?')) return;
+  function 넘겨도되나() {
+    if (안쓴글.size && !confirm('저장하지 않은 글이 있습니다. 그래도 넘어갈까요?')) return false;
     안쓴글.clear();
-    보는날 = n === 0 ? 자정(new Date()) : new Date(보는날.getFullYear(), 보는날.getMonth(), 보는날.getDate() + n);
+    return true;
+  }
+  function 넘기기(n) {
+    if (!넘겨도되나()) return;
+    보는날 = n === 0 ? 자정(new Date()) : 하루뒤(보는날, n * (단위 === '일' ? 1 : 7));
     그리기();
   }
 
@@ -371,8 +456,58 @@
     const 합 = 평가한것.reduce((s, h) => s + 평가점수[h.평가], 0);
     return Math.round(합 / 항목들.length * 100);   // 미평가도 분모에 넣는다
   }
+  const 기호 = 평가 => (평가모양.find(([값]) => 값 === 평가) || [null, '·'])[1];
 
-  function 영역카드(영역, 자료, 기간) {
+  // 접은 참고는 이 기기에서 기억한다. 기본은 펼침 (개발결정로그 8h.5)
+  const 접음키 = 'pronote_참고접음';
+  function 접은것() { try { return new Set(JSON.parse(localStorage.getItem(접음키) || '[]')); } catch (e) { return new Set(); } }
+  function 접음바꾸기(열쇠, 접나) {
+    const s = 접은것(); 접나 ? s.add(열쇠) : s.delete(열쇠);
+    try { localStorage.setItem(접음키, JSON.stringify([...s])); } catch (e) {}
+  }
+
+  function 참고블록(영역, 자료, 보기) {
+    const 상위 = 자료.상위항목.filter(h => h.영역ID === 영역.id);
+    const 지난 = 자료.지난항목.filter(h => h.영역ID === 영역.id);
+    const 지난피드백 = 자료.지난피드백[영역.id] || '';
+    if (!상위.length && !지난.length && !지난피드백) return null;   // 참고할 것이 없으면 줄째 안 보인다
+
+    const 틀 = 요소('div','참고');
+    const 열쇠 = 보기.단위 + ':' + 영역.id;
+    let 접힘 = 접은것().has(열쇠);
+    const 머리 = 요소('button','참고머리');
+    const 몸 = 요소('div');
+
+    const 요약 = [];
+    if (상위.length) 요약.push((보기.단위 === '일' ? '주간' : '분기') + ' 계획 ' + 상위.length);
+    if (지난.length) {
+      const 셈 = {}; 지난.forEach(h => { const k = 기호(h.평가); 셈[k] = (셈[k] || 0) + 1; });
+      요약.push((보기.단위 === '일' ? '전날 ' : '전주 ') + Object.keys(셈).map(k => k + 셈[k]).join(' '));
+    } else if (지난피드백) 요약.push(보기.단위 === '일' ? '전날 피드백' : '전주 피드백');
+    const 요약칸 = 요소('span', null, 요약.join(' · '));
+    const 그리머리 = () => { 머리.firstChild.textContent = '참고 ' + (접힘 ? '▸' : '▾'); 요약칸.style.display = 접힘 ? '' : 'none'; 몸.style.display = 접힘 ? 'none' : ''; };
+    머리.append(document.createTextNode(''), 요약칸);
+    머리.addEventListener('click', () => { 접힘 = !접힘; 접음바꾸기(열쇠, 접힘); 그리머리(); });
+
+    const 목록 = (제목, 항목들) => {
+      몸.appendChild(요소('div','참고제목', 제목));
+      항목들.forEach(h => {
+        const 줄 = 요소('div','참고줄');
+        줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(h.계획 + (h.주제 ? ' · ' + h.주제 : '')));
+        몸.appendChild(줄);
+      });
+    };
+    if (상위.length) 목록(보기.상위.이름, 상위);
+    if (지난.length || 지난피드백) {
+      목록(보기.지난.이름, 지난);
+      if (지난피드백) 몸.appendChild(요소('div','참고줄', '피드백: ' + 지난피드백));
+    }
+    틀.append(머리, 몸);
+    그리머리();
+    return 틀;
+  }
+
+  function 영역카드(영역, 자료, 보기) {
     const card = 요소('div','card');
     const 항목들 = 자료.항목들.filter(h => h.영역ID === 영역.id);
     const 머리 = 요소('div','영역머리');
@@ -381,25 +516,34 @@
     if (률 != null) 머리.appendChild(요소('div','달성률', '달성률 ' + 률 + '%'));
     card.appendChild(머리);
 
-    if (!항목들.length) card.appendChild(요소('div','없음','아직 적은 것이 없습니다.'));
-    else {
-      const ul = 요소('ul');
-      항목들.forEach(h => ul.appendChild(항목줄(h)));
-      card.appendChild(ul);
+    const 참고 = 참고블록(영역, 자료, 보기);
+    if (참고) card.appendChild(참고);
+
+    // 주제는 쓰는 사람에게만 보인다 — 주제 붙은 항목이 하나라도 있을 때만 묶는다 (개발결정로그 8h.6)
+    if (항목들.some(h => h.주제)) {
+      const 묶음 = new Map();
+      항목들.forEach(h => { const k = h.주제 || ''; if (!묶음.has(k)) 묶음.set(k, []); 묶음.get(k).push(h); });
+      const 차례 = [...묶음.keys()].filter(k => k).concat(묶음.has('') ? [''] : []);
+      차례.forEach(k => {
+        card.appendChild(요소('div','주제', k || '주제 없음'));
+        const ul = 요소('ul'); 묶음.get(k).forEach(h => ul.appendChild(항목줄(h, false))); card.appendChild(ul);
+      });
+    } else if (항목들.length) {
+      const ul = 요소('ul'); 항목들.forEach(h => ul.appendChild(항목줄(h, true))); card.appendChild(ul);
     }
 
     // 항목 추가
     const 줄 = 요소('div','입력줄');
     const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200;
-    inp.placeholder = 며칠차이(보는날) === 0 ? '오늘 할 일 한 줄' : '할 일 한 줄';
+    inp.placeholder = 보기.지금인가 ? (보기.단위 === '일' ? '오늘 할 일 한 줄' : '이번 주 할 일 한 줄') : '할 일 한 줄';
     const btn = 요소('button','작은단추','추가');
     const 추가 = () => 저장하며(async () => {
       const 글 = inp.value.trim();
       if (!글) { inp.focus(); return false; }
       const t = (await 탭읽기(['계획항목']))['계획항목'];
-      const 순서 = t.행들.filter(행 => t.값(행,'기간 단위')==='일' && t.값(행,'기간')===기간 && t.값(행,'영역ID')===영역.id)
+      const 순서 = t.행들.filter(행 => t.값(행,'기간 단위')===보기.단위 && t.값(행,'기간')===보기.기간 && t.값(행,'영역ID')===영역.id)
                          .reduce((m, 행) => Math.max(m, Number(t.값(행,'순서')) || 0), 0) + 1;
-      await 행붙이기('계획항목', t, { '항목ID':새번호표('it_'), '기간 단위':'일', '기간':기간, '영역ID':영역.id,
+      await 행붙이기('계획항목', t, { '항목ID':새번호표('it_'), '기간 단위':보기.단위, '기간':보기.기간, '영역ID':영역.id,
         '영역':영역.이름, '계획':글, '이월횟수':0, '순서':순서, '수정시각':지금() });
     }, [inp, btn]);
     btn.addEventListener('click', 추가);
@@ -409,11 +553,11 @@
 
     // 피드백 — 항목이 있거나 이미 쓴 글이 있을 때만 펼친다 (처음 켠 사람의 화면을 가볍게)
     const 쓴글 = 자료.피드백[영역.id] || '';
-    const 칸 = 글칸(영역.id, '피드백', 쓴글, '오늘 무엇이 잘 됐고 무엇이 막혔나', 글 =>
+    const 칸 = 글칸(영역.id, '피드백', 쓴글, '무엇이 잘 됐고 무엇이 막혔나', 글 =>
       행찾아쓰기('피드백',
-        (행, 값) => 값(행,'기간 단위')==='일' && 값(행,'기간')===기간 && 값(행,'영역ID')===영역.id && !값(행,'삭제됨'),
+        (행, 값) => 값(행,'기간 단위')===보기.단위 && 값(행,'기간')===보기.기간 && 값(행,'영역ID')===영역.id && !값(행,'삭제됨'),
         { '피드백':글, '수정시각':지금() },
-        () => ({ '피드백ID':새번호표('fb_'), '기간 단위':'일', '기간':기간, '영역ID':영역.id, '영역':영역.이름,
+        () => ({ '피드백ID':새번호표('fb_'), '기간 단위':보기.단위, '기간':보기.기간, '영역ID':영역.id, '영역':영역.이름,
                  '피드백':글, '수정시각':지금() })));
     if (항목들.length || 쓴글 || 안쓴글.has(영역.id)) card.appendChild(칸);
     else {
@@ -424,18 +568,18 @@
     return card;
   }
 
-  function 항목줄(h) {
+  function 항목줄(h, 주제꼬리표) {
     const li = 요소('li');
     const 줄 = 요소('div','항목줄');
     const 글 = 요소('div','항목글', h.계획);
-    if (h.주제) 글.appendChild(요소('span','꼬리표', h.주제));
+    if (주제꼬리표 && h.주제) 글.appendChild(요소('span','꼬리표', h.주제));
     if (h.이월) 글.appendChild(요소('span','꼬리표', '이월 ' + h.이월));
     글.title = '눌러서 고치기';
     글.addEventListener('click', () => li.replaceWith(항목고치기줄(h, li)));
 
     const 평가들 = 요소('div','평가들');
-    평가모양.forEach(([값, 기호]) => {
-      const b = 요소('button', h.평가 === 값 ? '골라짐' : null, 기호);
+    평가모양.forEach(([값, 기호글]) => {
+      const b = 요소('button', h.평가 === 값 ? '골라짐' : null, 기호글);
       b.setAttribute('aria-label', 값);
       // 이미 고른 것을 다시 누르면 빈 칸(아직 평가 안 함)으로 돌아간다
       b.addEventListener('click', () => 저장하며(() =>
@@ -476,14 +620,14 @@
     return li;
   }
 
-  function 일기카드(쓴글, 기간) {
+  function 일기카드(쓴글, 보기) {
     const card = 요소('div','card');
     card.appendChild(요소('div','영역이름','일기'));
     card.appendChild(글칸('일기', null, 쓴글, '마음·생각·감정·감사', 글 =>
       행찾아쓰기('일기',
-        (행, 값) => 값(행,'기간 단위')==='일' && 값(행,'기간')===기간 && !값(행,'삭제됨'),
+        (행, 값) => 값(행,'기간 단위')===보기.단위 && 값(행,'기간')===보기.기간 && !값(행,'삭제됨'),
         { '내용':글, '수정시각':지금() },
-        () => ({ '일기ID':새번호표('dy_'), '기간 단위':'일', '기간':기간, '내용':글, '수정시각':지금() }))));
+        () => ({ '일기ID':새번호표('dy_'), '기간 단위':보기.단위, '기간':보기.기간, '내용':글, '수정시각':지금() }))));
     return card;
   }
 
