@@ -69,7 +69,7 @@
   const loginBtn = document.getElementById('login');
   const 화면 = document.getElementById('화면');
   const msg = document.getElementById('msg');
-  let token = null, tokenClient = null, 시트ID = null;
+  let token = null, tokenClient = null, 시트ID = null, 대기 = null;
 
   const p2 = n => String(n).padStart(2,'0');
   function 오늘() { const d=new Date(); return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
@@ -82,37 +82,83 @@
   function 알림(text, cls) { msg.innerHTML=''; if(!text) return;
     const d=document.createElement('div'); if(cls) d.className=cls; d.textContent=text; msg.appendChild(d); }
 
-  async function api(url, options) {
-    const opt = options || {};
-    opt.headers = Object.assign({ Authorization:'Bearer '+token }, opt.headers||{});
+  async function api(url, options, 재시도했나) {
+    const opt = Object.assign({}, options || {});
+    opt.headers = Object.assign({ Authorization:'Bearer '+token }, (options && options.headers) || {});
     const r = await fetch(url, opt);
     const t = await r.text();
+    // 출입증은 한 시간쯤 지나면 만료된다. 그때는 조용히 새로 받아 한 번 더 해본다.
+    if (r.status === 401 && !재시도했나) {
+      try { await 출입증받기(true); } catch (e) { throw new Error('로그인이 풀렸습니다. 새로고침해 주세요.'); }
+      return api(url, options, true);
+    }
     if (!r.ok) throw new Error(r.status + '\n' + t);
     return t ? JSON.parse(t) : {};
   }
   const 시트API = path => 'https://sheets.googleapis.com/v4/spreadsheets/' + 시트ID + path;
 
   // ── 로그인 ──
+  // 구글 로그인에는 두 가지 방식이 있다.
+  //  · 조용히(prompt:'') — 전에 이 앱에 동의한 사람이면 창 없이 바로 출입증을 준다
+  //  · 창 띄우기        — 처음이거나 동의가 풀렸을 때
+  // 앱을 열 때 먼저 조용히 해보고, 안 되면 그때만 버튼을 보여준다.
+  function 출입증받기(조용히) {
+    return new Promise((성공, 실패) => {
+      대기 = { 성공, 실패, 조용히 };
+      tokenClient.requestAccessToken(조용히 ? { prompt: '' } : {});
+    });
+  }
+
   function initGoogle() {
     tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id:CLIENT_ID, scope:SCOPE, callback:onToken,
-      error_callback: e => { loginBtn.disabled=false;
-        알림(e && e.type==='popup_closed' ? '로그인 창이 닫혔습니다. 다시 눌러 주세요.'
-                                        : '로그인 중 문제가 생겼습니다.\n'+JSON.stringify(e),
-             e && e.type==='popup_closed' ? 'step' : 'err'); }
+      client_id: CLIENT_ID, scope: SCOPE,
+      callback: resp => {
+        const 요청 = 대기; 대기 = null;
+        if (resp.error) { if (요청) 요청.실패(new Error(resp.error)); return; }
+        if (!google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) {
+          if (요청) 요청.실패(new Error('권한 미동의')); return;
+        }
+        token = resp.access_token;
+        if (요청) 요청.성공();
+      },
+      error_callback: err => {
+        const 요청 = 대기; 대기 = null;
+        if (요청) 요청.실패(err || new Error('로그인 실패'));
+      }
     });
-    loginBtn.disabled=false; 알림('');
+    자동로그인();
   }
-  loginBtn.addEventListener('click', () => { loginBtn.disabled=true; 알림('로그인 창을 여는 중…','step'); tokenClient.requestAccessToken(); });
 
-  async function onToken(resp) {
-    if (resp.error) { loginBtn.disabled=false; 알림('구글이 로그인을 거절했습니다.\n'+resp.error,'err'); return; }
-    if (!google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) {
-      loginBtn.disabled=false; 알림('드라이브 권한에 동의해야 기록을 저장할 수 있습니다.','err'); return; }
-    token = resp.access_token;
-    loginBtn.style.display='none';
-    await 준비();
+  async function 자동로그인() {
+    알림('불러오는 중…','step');
+    try {
+      await 출입증받기(true);      // 창 없이 시도
+      loginBtn.style.display = 'none';
+      await 준비();
+    } catch (e) {
+      // 조용히 안 되면 버튼을 보여준다 (처음 쓰는 사람, 또는 브라우저가 막은 경우)
+      loginBtn.disabled = false;
+      loginBtn.style.display = '';
+      알림('');
+    }
   }
+
+  loginBtn.addEventListener('click', async () => {
+    loginBtn.disabled = true;
+    알림('로그인 창을 여는 중…','step');
+    try {
+      await 출입증받기(false);
+      loginBtn.style.display = 'none';
+      await 준비();
+    } catch (e) {
+      loginBtn.disabled = false;
+      const t = e && e.type;
+      if (t === 'popup_closed') { 알림('로그인 창이 닫혔습니다. 다시 눌러 주세요.','step'); }
+      else if (t === 'popup_failed_to_open') { 알림('로그인 창이 열리지 않았습니다.\n브라우저의 팝업 차단을 풀어 주세요.','err'); }
+      else if (e && e.message === '권한 미동의') { 알림('드라이브 권한에 동의해야 기록을 저장할 수 있습니다.','err'); }
+      else { 알림('로그인 중 문제가 생겼습니다.\n' + (e && (e.message || JSON.stringify(e))), 'err'); }
+    }
+  });
 
   // ── 시트 준비: 찾고, 없으면 만든다 ──
   async function 준비() {
