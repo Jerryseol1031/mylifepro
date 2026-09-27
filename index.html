@@ -39,7 +39,42 @@
   .참고줄 { line-height:1.55; padding-left:2px; }
   .참고줄 b { display:inline-block; width:14px; font-weight:400; color:var(--muted); }
 
-  .주제 { font-size:11px; color:var(--muted); font-weight:600; margin:10px 0 0; }
+  .주제 { font-size:11px; color:var(--muted); font-weight:600; margin:10px 0 0; display:flex; align-items:center; gap:5px; }
+  .점 { display:inline-block; width:9px; height:9px; border-radius:50%; flex:none; }
+  .점단추 { width:22px; height:22px; border:0; background:none; padding:0; display:flex; align-items:center; justify-content:center; flex:none; }
+  .점단추 .점 { width:12px; height:12px; }
+
+  /* 항목을 누르면 뜨는 주제 고르개 */
+  .고르개 { margin-top:8px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); }
+  .고르개제목 { font-size:11px; font-weight:600; color:var(--muted); margin-bottom:6px; }
+  .칩줄 { display:flex; flex-wrap:wrap; gap:5px; }
+  .칩 { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border:1px solid var(--line); border-radius:14px; background:#fff; font-size:13px; color:var(--fg); }
+  .칩.골라짐 { border-color:var(--accent); background:var(--soft); font-weight:600; }
+  .제안 { font-size:12px; margin-top:6px; color:var(--muted); display:flex; justify-content:space-between; align-items:center; gap:6px; }
+  .제안 button { border:0; background:none; color:var(--accent); font-weight:600; font-size:12px; padding:4px 0; flex:none; }
+
+  /* 설정 화면 */
+  .설정머리 { display:flex; justify-content:space-between; align-items:center; }
+  .설정머리 h2 { font-size:17px; margin:0; }
+  .닫기단추 { width:34px; height:34px; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:15px; color:var(--fg); }
+  #설정단추 { float:right; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:13px; padding:5px 10px; color:var(--fg); }
+  .묶음제목 { font-size:12px; font-weight:700; color:var(--muted); margin:14px 0 2px; }
+  .묶음제목:first-of-type { margin-top:8px; }
+  .설정줄 { display:flex; align-items:center; gap:6px; padding:7px 0; border-bottom:1px solid var(--line); min-height:40px; }
+  .설정줄:last-child { border-bottom:0; }
+  .설정줄 .이름 { flex:1; min-width:0; font-size:14px; word-break:break-word; }
+  .설정줄 .곁 { font-size:12px; color:var(--muted); flex:none; }
+  .네모단추 { width:30px; height:30px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--fg); font-size:12px; padding:0; flex:none; }
+  .네모단추:disabled { opacity:.3; }
+  .고치기틀 { padding:8px 0; border-bottom:1px solid var(--line); }
+  .기간고르기 { display:flex; gap:4px; margin-top:6px; }
+  .기간고르기 button { flex:1; padding:7px 0; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--muted); font-size:13px; }
+  .기간고르기 button.골라짐 { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  .단추줄 { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .색판 { display:flex; flex-wrap:wrap; gap:4px; padding:6px 0 8px 28px; }
+  .색판 button { display:flex; align-items:center; gap:4px; padding:4px 8px; border:1px solid var(--line); border-radius:14px; background:#fff; font-size:12px; color:var(--fg); }
+  .색판 button.골라짐 { border-color:var(--fg); font-weight:600; }
+  .안내글 { font-size:12px; color:var(--muted); margin-top:4px; }
   ul { list-style:none; margin:4px 0 0; padding:0; }
   li { padding:6px 0; border-bottom:1px solid var(--line); }
   li:last-child { border-bottom:0; }
@@ -76,7 +111,7 @@
 </head>
 <body>
 <main>
-  <header><h1>프로 노트</h1><span class="sub">나의 삶의 프로</span></header>
+  <header><h1>프로 노트</h1><span class="sub">나의 삶의 프로</span><button id="설정단추" style="display:none">설정</button></header>
   <button id="login" style="display:none">구글로 로그인</button>
   <div id="화면"></div>
   <div id="msg"><div class="step">불러오는 중…</div></div>
@@ -95,7 +130,7 @@
     ['계획항목', ['항목ID','기간 단위','기간','영역ID','영역','주제ID','주제','계획','평가','평가메모','이월횟수','순서','수정시각','삭제됨']],
     ['일기',     ['일기ID','기간 단위','기간','내용','수정시각','삭제됨']],
     ['영역설정', ['영역ID','이름','기본/커스텀','일','주','분기','연','순서','수정시각','삭제됨']],
-    ['주제설정', ['주제ID','영역ID','영역','이름','상태','순서','수정시각','삭제됨']],
+    ['주제설정', ['주제ID','이름','구분','상태','색','순서','수정시각','삭제됨']],
     ['핵심문제', ['핵심문제ID','기간 단위','기간','내용','수정시각','삭제됨']]
   ];
   function 기본영역행들(now) {
@@ -107,14 +142,23 @@
   }
   // 앱이 읽고 쓰는 칸. 첫 줄에서 이름으로 찾고, 하나라도 없으면 저장하지 않는다 (원칙 6)
   const 필요칸 = {
-    '영역설정': ['영역ID','이름','일','주','순서','삭제됨'],
-    '계획항목': ['항목ID','기간 단위','기간','영역ID','영역','주제','계획','평가','이월횟수','순서','수정시각','삭제됨'],
+    '영역설정': ['영역ID','이름','기본/커스텀','일','주','분기','연','순서','수정시각','삭제됨'],
+    '주제설정': ['주제ID','이름','구분','상태','색','순서','수정시각','삭제됨'],
+    '계획항목': ['항목ID','기간 단위','기간','영역ID','영역','주제ID','주제','계획','평가','이월횟수','순서','수정시각','삭제됨'],
     '피드백':   ['피드백ID','기간 단위','기간','영역ID','영역','피드백','수정시각','삭제됨'],
     '일기':     ['일기ID','기간 단위','기간','내용','수정시각','삭제됨']
   };
   // 시트에는 한글로, 화면에는 기호로 (설계 5-5)
   const 평가모양 = [['했다','○'],['일부','△'],['못했다','✕']];
   const 평가점수 = { '했다':1, '일부':0.5, '못했다':0 };
+  const 기간종류 = [['일','일간'],['주','주간'],['분기','분기'],['연','연간']];
+
+  // 주제는 영역이 아니라 「구분」에 속한다. 핵심 목표·실행 초점은 한 구분을 함께 쓴다 (설계 5-7-1)
+  const 기본구분 = { base_action:'목표·실행', base_goal:'목표·실행', base_constitution:'체질' };
+  const 영역구분 = 영역ID => 기본구분[영역ID] || 영역ID;
+  // 주제 색 — 시트에는 한글 이름, 화면에는 색조. 색조는 [4-4]에서 바꿔도 기록은 그대로다 (8h.10)
+  const 색들 = [['빨강','#d9534f'],['주황','#e8833a'],['노랑','#d4a72c'],['초록','#4a9b5f'],
+                ['청록','#2a9d8f'],['파랑','#3b73c4'],['보라','#7d5bbf'],['분홍','#d6699c']];
 
   const loginBtn = document.getElementById('login');
   const 화면 = document.getElementById('화면');
@@ -247,6 +291,8 @@
       const 시트들 = r.files || [];
       if (시트들.length > 1) { 알림('⚠ 기록 시트가 '+시트들.length+'개 있습니다. 하나만 있어야 해서 멈춥니다.','err'); return; }
       시트ID = 시트들.length === 1 ? 시트들[0].id : await 시트만들기();
+      await 주제설정맞추기();
+      설정단추.style.display = '';
       알림('');
       await 그리기();
     } catch (e) { 알림('시트를 여는 중 문제가 생겼습니다.\n'+e.message,'err'); }
@@ -271,8 +317,29 @@
     return 시트ID;
   }
 
+  // 옛 시트의 「주제설정」은 옛 칸(영역ID·영역…)으로 만들어졌다. 행이 없을 때만 첫 줄을 새 칸으로 바꿔 쓰고,
+  // 행이 있는데 칸이 모자라면 모자란 칸을 맨 뒤에 붙인다 — 칸은 이름으로 찾으므로 위치는 상관없다 (설계 5-7-1)
+  async function 주제설정맞추기() {
+    const 새칸 = TABS.find(x => x[0] === '주제설정')[1];
+    const t = (await 탭읽기(['주제설정'], true))['주제설정'];
+    const 행있나 = t.행들.some(행 => 행.some(v => String(v).trim()));
+    if (!행있나) {
+      if (t.머리.join('|') === 새칸.join('|')) return;
+      const 줄 = 새칸.concat(new Array(Math.max(0, t.머리.length - 새칸.length)).fill(''));   // 남는 옛 칸은 비운다
+      await 값쓰기("'주제설정'!A1", [줄]);
+      return;
+    }
+    const 없는칸 = 새칸.filter(n => !(n in t.자리));
+    if (없는칸.length) await 값쓰기("'주제설정'!" + 열글자(t.머리.length) + '1', [없는칸]);
+  }
+
+  async function 값쓰기(범위, 값들) {
+    await api(시트API('/values:batchUpdate'), { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ valueInputOption:'RAW', data:[{ range:범위, values:값들 }] }) });
+  }
+
   // ── 읽기: 탭을 통째로 읽고, 칸은 첫 줄의 이름으로 찾는다 (원칙 6) ──
-  async function 탭읽기(이름들) {
+  async function 탭읽기(이름들, 칸검사안함) {
     const q = 이름들.map(n => 'ranges=' + encodeURIComponent("'"+n+"'!A1:ZZ")).join('&');
     let r;
     try { r = await api(시트API('/values:batchGet?' + q)); }
@@ -287,11 +354,11 @@
       const 이름 = 이름들[i], 줄들 = vr.values || [], 머리 = 줄들[0] || [];
       const 자리 = {};
       머리.forEach((칸, j) => { 자리[String(칸).trim()] = j; });
-      const 없는칸 = (필요칸[이름] || []).filter(n => !(n in 자리));
+      const 없는칸 = 칸검사안함 ? [] : (필요칸[이름] || []).filter(n => !(n in 자리));
       if (없는칸.length) throw new Error('「'+이름+'」 탭에서 이 칸을 못 찾았습니다: '+없는칸.join(', ')
         + '\n칸 이름이 바뀌었을 수 있습니다. 원래 이름으로 되돌려 주세요. (저장하지 않았습니다)');
       const 값 = (행, 칸) => String(행[자리[칸]] == null ? '' : 행[자리[칸]]).trim();
-      결과[이름] = { 자리, 칸수: 머리.length, 행들: 줄들.slice(1), 값 };
+      결과[이름] = { 자리, 머리: 머리.map(칸 => String(칸).trim()), 칸수: 머리.length, 행들: 줄들.slice(1), 값 };
     });
     return 결과;
   }
@@ -311,6 +378,31 @@
     }
     if (!없으면붙일것) throw new Error('고칠 줄을 시트에서 못 찾았습니다. 새로고침해 주세요.');
     await 행붙이기(탭, t, 없으면붙일것(t));
+  }
+
+  // 여러 행을 한 번 읽고 한 번에 고친다. 모두:true면 맞는 행을 전부, 아니면 첫 행만 (없으면 멈춘다).
+  // 이름을 바꿀 때 석 달치 사본을 고쳐도 요청은 읽기 한 번 + 쓰기 한 번이다
+  async function 고치기(탭, 일들) {
+    const t = (await 탭읽기([탭]))[탭];
+    const data = [];
+    일들.forEach(일 => {
+      const 번호들 = [];
+      t.행들.forEach((행, i) => { if ((일.모두 || !번호들.length) && 일.찾기(행, t.값)) 번호들.push(i + 2); });
+      if (!번호들.length && !일.모두) throw new Error('고칠 줄을 시트에서 못 찾았습니다. 새로고침해 주세요.');
+      번호들.forEach(n => Object.keys(일.바꿀것).forEach(칸 =>
+        data.push({ range:"'"+탭+"'!"+열글자(t.자리[칸])+n, values:[[일.바꿀것[칸]]] })));
+    });
+    if (!data.length) return;
+    await api(시트API('/values:batchUpdate'), { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ valueInputOption:'RAW', data }) });
+  }
+
+  // 이름을 바꾸면 기록 행의 사본 칸도 함께 고친다. 앱은 번호표로 찾으므로 이게 실패해도 안 끊긴다 (8h.16)
+  async function 사본고치기(종류, id, 새이름) {
+    const 칸 = 종류 === '영역' ? '영역' : '주제', id칸 = 칸 + 'ID';
+    const 일 = { 모두:true, 찾기:(행, 값) => 값(행, id칸) === id && 값(행, 칸) !== 새이름, 바꿀것:{ [칸]:새이름 } };
+    await 고치기('계획항목', [일]);
+    if (종류 === '영역') await 고치기('피드백', [일]);
   }
 
   async function 행붙이기(탭, t, 값들) {
@@ -373,18 +465,31 @@
 
   // ── 그 기간의 기록을 모은다 (참고할 상위·지난 기간까지 한 번에 읽는다) ──
   async function 모으기(보기) {
-    const 탭들 = await 탭읽기(['영역설정','계획항목','피드백','일기']);
-    const 영 = 탭들['영역설정'], 계 = 탭들['계획항목'], 피 = 탭들['피드백'], 일 = 탭들['일기'];
+    const 탭들 = await 탭읽기(['영역설정','주제설정','계획항목','피드백','일기']);
+    const 영 = 탭들['영역설정'], 주 = 탭들['주제설정'], 계 = 탭들['계획항목'], 피 = 탭들['피드백'], 일 = 탭들['일기'];
     const 살아있나 = (t, 행) => !t.값(행, '삭제됨');
     const 그기간 = (t, 행, 단, 간) => t.값(행,'기간 단위') === 단 && t.값(행,'기간') === 간 && 살아있나(t, 행);
 
-    const 영역들 = 영.행들
-      .filter(행 => 영.값(행,'영역ID') && 영.값(행, 보기.단위) === 'O' && 살아있나(영, 행))
-      .map(행 => ({ id: 영.값(행,'영역ID'), 이름: 영.값(행,'이름'), 순서: Number(영.값(행,'순서')) || 0 }))
+    // 영역은 기간과 상관없이 다 읽어 둔다 — 설정 화면도 같은 자료를 쓴다
+    const 영역전체 = 영.행들
+      .filter(행 => 영.값(행,'영역ID') && 살아있나(영, 행))
+      .map(행 => ({ id: 영.값(행,'영역ID'), 이름: 영.값(행,'이름'), 기본: 영.값(행,'기본/커스텀') === '기본',
+        기간: Object.fromEntries(기간종류.map(([k]) => [k, 영.값(행, k) === 'O'])), 순서: Number(영.값(행,'순서')) || 0 }))
       .sort((a, b) => a.순서 - b.순서);
 
+    // 지운 주제도 읽어 둔다 — 그 주제가 붙은 옛 항목은 그 이름을 달고 그대로 보인다 (설계 5-7-1)
+    const 주제맵 = new Map();
+    주.행들.forEach(행 => {
+      const id = 주.값(행,'주제ID');
+      if (!id || 주제맵.has(id)) return;
+      주제맵.set(id, { id, 이름: 주.값(행,'이름'), 구분: 주.값(행,'구분'), 빼둠: 주.값(행,'상태') === '빼둠',
+        색: 주.값(행,'색'), 순서: Number(주.값(행,'순서')) || 0, 지움: !살아있나(주, 행) });
+    });
+    const 주제항목수 = new Map();   // 빼 둔 주제를 제안할 때 「항목 12개」로 보인다
+    계.행들.forEach(행 => { const id = 계.값(행,'주제ID'); if (id && 살아있나(계, 행)) 주제항목수.set(id, (주제항목수.get(id) || 0) + 1); });
+
     const 항목모으기 = (단, 간) => 계.행들.filter(행 => 그기간(계, 행, 단, 간)).map(행 => ({
-      id: 계.값(행,'항목ID'), 영역ID: 계.값(행,'영역ID'), 주제: 계.값(행,'주제'), 계획: 계.값(행,'계획'),
+      id: 계.값(행,'항목ID'), 영역ID: 계.값(행,'영역ID'), 주제ID: 계.값(행,'주제ID'), 주제사본: 계.값(행,'주제'), 계획: 계.값(행,'계획'),
       평가: 계.값(행,'평가'), 이월: Number(계.값(행,'이월횟수')) || 0, 순서: Number(계.값(행,'순서')) || 0
     })).sort((a, b) => a.순서 - b.순서);
     const 피드백모으기 = (단, 간) => {
@@ -397,7 +502,7 @@
     };
     const 일기줄 = 일.행들.find(행 => 그기간(일, 행, 보기.단위, 보기.기간));
     return {
-      영역들,
+      영역전체, 주제맵, 주제항목수,
       항목들: 항목모으기(보기.단위, 보기.기간),
       피드백: 피드백모으기(보기.단위, 보기.기간),
       일기: 일기줄 ? 일.값(일기줄,'내용') : '',
@@ -407,10 +512,56 @@
     };
   }
 
+  // ── 주제 ──
+  // 화면에 뜨는 이름은 설정 탭에서 가져온다. 기록 행의 「주제」 칸은 사람이 읽는 사본이다 (8h.16)
+  const 주제이름 = h => { const z = 자료.주제맵.get(h.주제ID); return (z && z.이름) || h.주제사본 || ''; };
+  // 한 구분의 주제들, 순서대로. 목록에있는것만이면 빼 둔 것은 뺀다. 지운 것은 늘 뺀다
+  function 구분주제들(구분, 목록에있는것만) {
+    return [...자료.주제맵.values()].filter(z => z.구분 === 구분 && !z.지움 && !(목록에있는것만 && z.빼둠))
+      .sort((a, b) => a.순서 - b.순서);
+  }
+  // 칸에 적힌 색. 비었거나 모르는 글자면 구분 안의 순서대로 돌려 쓴다 (시트에 손으로 넣은 행의 안전망)
+  function 색이름(z) {
+    if (색들.some(c => c[0] === z.색)) return z.색;
+    const i = 구분주제들(z.구분).indexOf(z);
+    return 색들[(i < 0 ? 0 : i) % 색들.length][0];
+  }
+  const 주제색 = z => z ? 색들.find(c => c[0] === 색이름(z))[1] : '#b5b5b5';   // 설정에 없는 주제는 회색
+  // 새 주제의 색: 그 구분에서 아직 안 쓴 색(자동색으로 보이는 것도 쓴 것으로 센다). 다 쓰였으면 가장 적게 쓴 색
+  function 새색(구분) {
+    const 셈 = new Map(색들.map(c => [c[0], 0]));
+    구분주제들(구분).forEach(z => { const 이름 = 색이름(z); 셈.set(이름, 셈.get(이름) + 1); });
+    let 고른 = 색들[0][0];
+    색들.forEach(([이름]) => { if (셈.get(이름) < 셈.get(고른)) 고른 = 이름; });
+    return 고른;
+  }
+  function 주제만들기(이름, 구분) {
+    const z = { id: 새번호표('tp_'), 이름, 구분, 빼둠: false, 색: 새색(구분),
+      순서: 구분주제들(구분).reduce((m, x) => Math.max(m, x.순서), 0) + 1, 지움: false };
+    자료.주제맵.set(z.id, z);
+    저장하기(async () => {
+      const t = (await 탭읽기(['주제설정']))['주제설정'];
+      await 행붙이기('주제설정', t, { '주제ID':z.id, '이름':z.이름, '구분':z.구분, '색':z.색, '순서':z.순서, '수정시각':지금() });
+    }, () => '만들려던 주제: ' + 이름);
+    return z;
+  }
+  // 빼 둔 주제를 목록에 다시 넣는다 — 같은 번호표라 옛 기록과 이어진다. 목록 맨 뒤로 간다
+  function 다시넣기(z) {
+    z.빼둠 = false;
+    z.순서 = 구분주제들(z.구분, true).filter(x => x !== z).reduce((m, x) => Math.max(m, x.순서), 0) + 1;
+    const 순서 = z.순서;
+    저장하기(() => 고치기('주제설정', [{ 찾기:(행, v) => v(행,'주제ID') === z.id, 바꿀것:{ '상태':'', '순서':순서, '수정시각':지금() } }]));
+  }
+
   // ── 그리기 ──
   // 시트에서 읽어 온 것(자료)을 들고 있다가, 손으로 바꾼 것은 화면부터 바로 고치고 저장은 뒤에서 한다.
   // 기다리는 저장이 끝나기 전에는 새로 읽지 않는다 — 읽으면 아직 안 들어간 것이 사라져 보인다.
   let 자료 = null, 보기 = null, 다시초점 = null;
+  let 화면종류 = '회고';   // '회고' 또는 '설정'
+  const 설정단추 = document.getElementById('설정단추');
+  설정단추.addEventListener('click', () => 설정열기());
+  function 설정열기() { if (!자료) return; 화면종류 = '설정'; 설정편집 = null; 화면그리기(); window.scrollTo(0, 0); }
+  function 설정닫기() { 화면종류 = '회고'; 설정편집 = null; 화면그리기(); 그리기(); window.scrollTo(0, 0); }
 
   async function 그리기(저장기다리기 = true) {
     if (저장기다리기) await 저장줄;
@@ -428,20 +579,29 @@
 
   function 화면그리기() {
     화면.innerHTML = '';
+    설정단추.style.display = 화면종류 === '회고' ? '' : 'none';
+    if (화면종류 === '설정') { 설정그리기(); return; }
     화면.appendChild(날짜카드(보기));
-    자료.영역들.forEach(영역 => 화면.appendChild(영역카드(영역, 자료, 보기)));
+    자료.영역전체.filter(영역 => 영역.기간[보기.단위]).forEach(영역 => 화면.appendChild(영역카드(영역, 자료, 보기)));
     화면.appendChild(일기카드(자료.일기, 보기));
     if (다시초점) { const 칸 = 화면.querySelector('[data-추가="'+다시초점+'"]'); if (칸) 칸.focus({ preventScroll:true }); 다시초점 = null; }
   }
 
   // 저장은 한 줄로 세워 차례로 한다 (빨리 여러 번 눌러도 순서가 섞이지 않게).
   // 실패하면 시트를 다시 읽어 화면을 사실대로 되돌리고 크게 알린다 (원칙 3).
+  // 합칠열쇠가 같은 쓰기가 줄에서 기다리고 있으면 앞의 것은 버리고 마지막 것만 보낸다 (8h.9) —
+  // 평가를 ○→△→✕로 빨리 바꿔도 시트에 남을 것은 마지막 값뿐이다. 그래서 그런 쓰기는 늘 전체 값을 쓴다
   let 저장줄 = Promise.resolve(), 남은저장 = 0, 저장실패 = null, 실패덧글 = [];
-  function 저장하기(일, 실패하면) {
+  const 마지막쓰기 = new Map();
+  function 저장하기(일, 실패하면, 합칠열쇠) {
     남은저장++;
     알림('저장하는 중…','step');
+    const 표 = {};
+    if (합칠열쇠) 마지막쓰기.set(합칠열쇠, 표);
     저장줄 = 저장줄.then(async () => {
-      try { await 일(); }
+      const 버림 = 합칠열쇠 && 마지막쓰기.get(합칠열쇠) !== 표;
+      if (합칠열쇠 && !버림) 마지막쓰기.delete(합칠열쇠);
+      try { if (!버림) await 일(); }
       catch (e) { const 덧 = 실패하면 && 실패하면(); if (덧) 실패덧글.push(덧); 저장실패 = 저장실패 || e; }
       남은저장--;
       if (남은저장 > 0) return;
@@ -537,7 +697,8 @@
       몸.appendChild(요소('div','참고제목', 제목));
       항목들.forEach(h => {
         const 줄 = 요소('div','참고줄');
-        줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(h.계획 + (h.주제 ? ' · ' + h.주제 : '')));
+        const 주제 = 주제이름(h);
+        줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(h.계획 + (주제 ? ' · ' + 주제 : '')));
         몸.appendChild(줄);
       });
     };
@@ -564,44 +725,26 @@
     if (참고) card.appendChild(참고);
 
     card.appendChild(요소('div','칸제목','계획'));
-    // 주제는 쓰는 사람에게만 보인다 — 주제 붙은 항목이 하나라도 있을 때만 묶는다 (개발결정로그 8h.6)
-    if (항목들.some(h => h.주제)) {
-      const 묶음 = new Map();
-      항목들.forEach(h => { const k = h.주제 || ''; if (!묶음.has(k)) 묶음.set(k, []); 묶음.get(k).push(h); });
-      const 차례 = [...묶음.keys()].filter(k => k).concat(묶음.has('') ? [''] : []);
-      차례.forEach(k => {
-        card.appendChild(요소('div','주제', k || '주제 없음'));
-        const ul = 요소('ul'); 묶음.get(k).forEach(h => ul.appendChild(항목줄(h, false))); card.appendChild(ul);
-      });
-    } else if (항목들.length) {
-      const ul = 요소('ul'); 항목들.forEach(h => ul.appendChild(항목줄(h, true))); card.appendChild(ul);
-    }
-
-    // 항목 추가
-    const 줄 = 요소('div','입력줄');
-    const 추가열쇠 = '추가:' + 영역.id;
-    const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200;
-    inp.dataset.추가 = 영역.id;
-    inp.value = 안쓴글.get(추가열쇠) || '';
-    inp.addEventListener('input', () => { inp.value.trim() ? 안쓴글.set(추가열쇠, inp.value) : 안쓴글.delete(추가열쇠); });
-    const btn = 요소('button','작은단추','추가');
-    const 추가 = () => {
-      const 글 = inp.value.trim();
-      if (!글) { inp.focus(); return; }
-      const h = { id: 새번호표('it_'), 영역ID: 영역.id, 주제: '', 계획: 글, 평가: '', 이월: 0,
-        순서: 자료.항목들.filter(x => x.영역ID === 영역.id).reduce((m, x) => Math.max(m, x.순서), 0) + 1 };
-      const 단 = 보기.단위, 간 = 보기.기간;
-      자료.항목들.push(h); 안쓴글.delete(추가열쇠); 다시초점 = 영역.id; 화면그리기();
-      저장하기(async () => {
-        const t = (await 탭읽기(['계획항목']))['계획항목'];
-        await 행붙이기('계획항목', t, { '항목ID':h.id, '기간 단위':단, '기간':간, '영역ID':영역.id,
-          '영역':영역.이름, '계획':글, '이월횟수':0, '순서':h.순서, '수정시각':지금() });
-      }, () => { 안쓴글.set(추가열쇠, 글); });   // 실패하면 적은 글을 입력칸에 되돌린다
-    };
-    btn.addEventListener('click', 추가);
-    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 추가(); });
-    줄.append(inp, btn);
-    card.appendChild(줄);
+    // 주제 없는 항목은 제목 없이 맨 위, 그 아래 입력칸 (8h.15)
+    const 목록 = 묶음항목들 => { const ul = 요소('ul'); 묶음항목들.forEach(h => ul.appendChild(항목줄(h, 영역))); return ul; };
+    const 주제없는 = 항목들.filter(h => !h.주제ID);
+    if (주제없는.length) card.appendChild(목록(주제없는));
+    card.appendChild(추가줄(영역, null));
+    // 그 구분의 「목록에 있는」 주제마다 묶음과 입력칸. 주제를 안 쓰는 사람에게는 아무것도 안 생긴다
+    const 목록주제 = 구분주제들(영역구분(영역.id), true);
+    목록주제.forEach(z => {
+      card.appendChild(주제제목(z, z.이름));
+      const 묶음 = 항목들.filter(h => h.주제ID === z.id);
+      if (묶음.length) card.appendChild(목록(묶음));
+      card.appendChild(추가줄(영역, z));
+    });
+    // 빼 둔·지운 주제라도 이 기간에 붙은 항목이 있으면 묶음은 보인다 (입력칸 없이)
+    const 남은ID = [...new Set(항목들.filter(h => h.주제ID && !목록주제.some(z => z.id === h.주제ID)).map(h => h.주제ID))];
+    남은ID.forEach(id => {
+      const 묶음 = 항목들.filter(h => h.주제ID === id);
+      card.appendChild(주제제목(자료.주제맵.get(id), 주제이름(묶음[0])));
+      card.appendChild(목록(묶음));
+    });
 
     // 피드백 — 항목이 있거나 이미 쓴 글이 있을 때만 펼친다 (처음 켠 사람의 화면을 가볍게)
     const 쓴글 = 자료.피드백[영역.id] || '';
@@ -623,14 +766,50 @@
     return card;
   }
 
-  function 항목줄(h, 주제꼬리표) {
+  function 주제제목(z, 이름) {
+    const 제목 = 요소('div','주제');
+    const 점 = 요소('span','점'); 점.style.background = 주제색(z);
+    제목.append(점, document.createTextNode(이름));
+    return 제목;
+  }
+
+  // 할 일 한 줄 입력칸. 주제 묶음 안의 칸에 적으면 그 주제가 붙는다
+  function 추가줄(영역, z) {
+    const 줄 = 요소('div','입력줄');
+    const 칸열쇠 = 영역.id + (z ? ':' + z.id : '');
+    const 추가열쇠 = '추가:' + 칸열쇠;
+    const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200;
+    inp.dataset.추가 = 칸열쇠;
+    inp.placeholder = z ? z.이름 + ' 할 일 한 줄' : 보기.안내;
+    inp.value = 안쓴글.get(추가열쇠) || '';
+    inp.addEventListener('input', () => { inp.value.trim() ? 안쓴글.set(추가열쇠, inp.value) : 안쓴글.delete(추가열쇠); });
+    const btn = 요소('button','작은단추','추가');
+    const 추가 = () => {
+      const 글 = inp.value.trim();
+      if (!글) { inp.focus(); return; }
+      const h = { id: 새번호표('it_'), 영역ID: 영역.id, 주제ID: z ? z.id : '', 주제사본: z ? z.이름 : '', 계획: 글, 평가: '', 이월: 0,
+        순서: 자료.항목들.filter(x => x.영역ID === 영역.id).reduce((m, x) => Math.max(m, x.순서), 0) + 1 };
+      const 단 = 보기.단위, 간 = 보기.기간;
+      자료.항목들.push(h); 안쓴글.delete(추가열쇠); 다시초점 = 칸열쇠; 화면그리기();
+      저장하기(async () => {
+        const t = (await 탭읽기(['계획항목']))['계획항목'];
+        await 행붙이기('계획항목', t, { '항목ID':h.id, '기간 단위':단, '기간':간, '영역ID':영역.id, '영역':영역.이름,
+          '주제ID':h.주제ID, '주제':h.주제사본, '계획':글, '이월횟수':0, '순서':h.순서, '수정시각':지금() });
+      }, () => { 안쓴글.set(추가열쇠, 글); });   // 실패하면 적은 글을 입력칸에 되돌린다
+    };
+    btn.addEventListener('click', 추가);
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 추가(); });
+    줄.append(inp, btn);
+    return 줄;
+  }
+
+  function 항목줄(h, 영역) {
     const li = 요소('li');
     const 줄 = 요소('div','항목줄');
     const 글 = 요소('div','항목글', h.계획);
-    if (주제꼬리표 && h.주제) 글.appendChild(요소('span','꼬리표', h.주제));
     if (h.이월) 글.appendChild(요소('span','꼬리표', '이월 ' + h.이월));
-    글.title = '눌러서 고치기';
-    글.addEventListener('click', () => li.replaceWith(항목고치기줄(h, li)));
+    글.title = '눌러서 고치기 · 주제 붙이기';
+    글.addEventListener('click', () => li.replaceWith(항목고치기줄(h, li, 영역)));
 
     const 평가들 = 요소('div','평가들');
     평가모양.forEach(([값, 기호글]) => {
@@ -640,7 +819,8 @@
       b.addEventListener('click', () => {
         const 새값 = h.평가 === 값 ? '' : 값;
         h.평가 = 새값; 화면그리기();
-        저장하기(() => 행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id, { '평가': 새값, '수정시각': 지금() }));
+        저장하기(() => 행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id, { '평가': 새값, '수정시각': 지금() }),
+          null, '평가:' + h.id);
       });
       평가들.appendChild(b);
     });
@@ -650,20 +830,27 @@
     return li;
   }
 
-  function 항목고치기줄(h, 원래) {
+  function 항목고치기줄(h, 원래, 영역) {
     const li = 요소('li');
     const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200; inp.value = h.계획;
     const 줄 = 요소('div','입력줄');
     const 저장 = 요소('button','작은단추','저장');
     const 지우기 = 요소('button','옅은단추 지우기단추','지우기');
     const 취소 = 요소('button','옅은단추','취소');
-    저장.addEventListener('click', () => {
-      const 글 = inp.value.trim();
-      if (!글) { inp.focus(); return; }
+    // 글과 주제를 함께 쓴다 — 연달아 고쳐 앞의 쓰기가 버려져도 마지막 쓰기에 둘 다 들어 있다 (8h.9)
+    const 항목쓰기 = (z) => {
+      const 글 = inp.value.trim() || h.계획;
       const 옛글 = h.계획;
-      h.계획 = 글; 화면그리기();
-      저장하기(() => 행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id, { '계획':글, '수정시각':지금() }),
-        () => '고치려던 글: ' + 글 + ' (원래: ' + 옛글 + ')');
+      h.계획 = 글;
+      if (z !== undefined) { h.주제ID = z ? z.id : ''; h.주제사본 = z ? z.이름 : ''; }
+      화면그리기();
+      const 값 = { '계획':글, '주제ID':h.주제ID, '주제':h.주제사본, '수정시각':지금() };
+      저장하기(() => 고치기('계획항목', [{ 찾기:(행, v) => v(행,'항목ID') === h.id, 바꿀것:값 }]),
+        () => 글 !== 옛글 ? '고치려던 글: ' + 글 + ' (원래: ' + 옛글 + ')' : null, '항목:' + h.id);
+    };
+    저장.addEventListener('click', () => {
+      if (!inp.value.trim()) { inp.focus(); return; }
+      항목쓰기();
     });
     // 행을 진짜 지우지 않고 「삭제」 표시만 한다 (설계 5-6)
     지우기.addEventListener('click', () => {
@@ -676,8 +863,67 @@
     li.appendChild(inp);
     줄.append(저장, 지우기, 취소);
     li.appendChild(줄);
-    setTimeout(() => inp.focus(), 0);
+    li.appendChild(주제고르개(h, 영역, 항목쓰기));
     return li;
+  }
+
+  // 주제 고르개 (8h.14) — 그 구분의 「목록에 있는」 주제만 칩으로. 고른 것을 다시 누르면 주제를 뗀다.
+  // 새 주제 이름을 치면 빼 둔 주제 중 그 글자가 든 것만 한 줄씩 제안한다 (이어 쓰면 같은 번호표)
+  function 주제고르개(h, 영역, 항목쓰기) {
+    const 구분 = 영역구분(영역.id);
+    const 틀 = 요소('div','고르개');
+    const 목록주제 = 구분주제들(구분, true);
+    if (목록주제.length) {
+      틀.appendChild(요소('div','고르개제목','주제'));
+      const 칩줄 = 요소('div','칩줄');
+      목록주제.forEach(z => {
+        const b = 요소('button', '칩' + (h.주제ID === z.id ? ' 골라짐' : ''));
+        const 점 = 요소('span','점'); 점.style.background = 주제색(z);
+        b.append(점, document.createTextNode(z.이름));
+        b.addEventListener('click', () => 항목쓰기(h.주제ID === z.id ? null : z));
+        칩줄.appendChild(b);
+      });
+      틀.appendChild(칩줄);
+    }
+    const 줄 = 요소('div','입력줄');
+    const 새칸 = 요소('input'); 새칸.type = 'text'; 새칸.maxLength = 40; 새칸.placeholder = '+ 새 주제';
+    const 만들기 = 요소('button','옅은단추','만들기');
+    줄.append(새칸, 만들기);
+    틀.appendChild(줄);
+    const 제안칸 = 요소('div');
+    틀.appendChild(제안칸);
+
+    const 빼둔것 = () => 구분주제들(구분).filter(z => z.빼둠);
+    새칸.addEventListener('input', () => {
+      제안칸.innerHTML = '';
+      const 글 = 새칸.value.trim();
+      if (!글) return;
+      const 맞는것 = 빼둔것().filter(z => z.이름.includes(글));
+      맞는것.forEach(z => {
+        const 한줄 = 요소('div','제안', '전에 쓴 「' + z.이름 + '」 항목 ' + (자료.주제항목수.get(z.id) || 0) + '개');
+        const 이어 = 요소('button', null, '이어 쓰기');
+        이어.addEventListener('click', () => { 다시넣기(z); 항목쓰기(z); });
+        한줄.appendChild(이어);
+        제안칸.appendChild(한줄);
+      });
+      if (맞는것.length) {
+        const 더 = 요소('div','제안', '');
+        const 설정으로 = 요소('button', null, '자세히 보려면 설정 ›');
+        설정으로.addEventListener('click', () => { if (!안쓴글.size || confirm('저장하지 않은 글이 있습니다. 그래도 설정으로 갈까요?')) 설정열기(); });
+        더.appendChild(설정으로);
+        제안칸.appendChild(더);
+      }
+    });
+    const 새로 = () => {
+      const 이름 = 새칸.value.trim();
+      if (!이름) { 새칸.focus(); return; }
+      // 같은 이름이 목록에 이미 있으면 새로 만들지 않고 그것을 붙인다
+      const 있는것 = 목록주제.find(z => z.이름 === 이름);
+      항목쓰기(있는것 || 주제만들기(이름, 구분));
+    };
+    만들기.addEventListener('click', 새로);
+    새칸.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 새로(); });
+    return 틀;
   }
 
   function 일기카드(쓴글, 보기) {
@@ -714,11 +960,299 @@
       const 글 = ta.value.trim();
       const 쓸일 = 저장함수(글);
       안쓴글.delete(열쇠); 화면그리기();
-      저장하기(쓸일, () => { 안쓴글.set(열쇠, 글); });   // 실패하면 적은 글을 칸에 되돌린다
+      저장하기(쓸일, () => { 안쓴글.set(열쇠, 글); },   // 실패하면 적은 글을 칸에 되돌린다
+        '글:' + 보기.단위 + ':' + 보기.기간 + ':' + 열쇠);
     });
     단추줄.appendChild(btn);
     틀.append(ta, 단추줄);
     return 틀;
+  }
+
+  // ── 설정 화면 (설계 6장 「설정 화면」) ──
+  // 설정편집: 지금 펼쳐 둔 고치기 틀. '새영역' · '영역:ID' · '새주제:구분' · '주제:ID' · '색:ID' · '빼둔이름:ID'
+  let 설정편집 = null, 빼둔펼침 = false;
+  const 편집 = 값 => { 설정편집 = 값; 화면그리기(); };
+  const 기간글 = 영 => 기간종류.filter(([k]) => 영.기간[k]).map(([k]) => k).join('·') || '어느 회고에도 안 나옴';
+
+  function 설정그리기() {
+    const 머리 = 요소('div','설정머리');
+    머리.appendChild(요소('h2', null, '설정'));
+    const 닫기 = 요소('button','닫기단추','✕'); 닫기.setAttribute('aria-label','설정 닫기');
+    닫기.addEventListener('click', 설정닫기);
+    머리.appendChild(닫기);
+    화면.append(머리, 영역설정카드(), 주제설정카드());
+  }
+
+  function 설정줄(이름, 곁) {
+    const 줄 = 요소('div','설정줄');
+    줄.appendChild(요소('div','이름', 이름));
+    if (곁) 줄.appendChild(요소('div','곁', 곁));
+    return 줄;
+  }
+  function 네모(글, 이름표, 할일, 막힘) {
+    const b = 요소('button','네모단추', 글); b.setAttribute('aria-label', 이름표);
+    b.disabled = !!막힘; b.addEventListener('click', 할일);
+    return b;
+  }
+
+  // 영역 — 기본 셋은 보기만, 영역(커스텀)은 추가·이름·적용 기간·순서·지우기 (8h.17)
+  function 영역설정카드() {
+    const card = 요소('div','card');
+    card.appendChild(요소('div','영역이름','영역'));
+    자료.영역전체.filter(a => a.기본).forEach(a => card.appendChild(설정줄(a.이름, 기간글(a))));
+    card.appendChild(요소('div','안내글','위 셋은 기본 영역이라 바꿀 수 없습니다.'));
+    const 커스텀 = 자료.영역전체.filter(a => !a.기본);
+    커스텀.forEach((a, i) => {
+      if (설정편집 === '영역:' + a.id) { card.appendChild(영역고치기틀(a)); return; }
+      const 줄 = 설정줄(a.이름, 기간글(a));
+      줄.append(네모('▲','위로', () => 영역옮기기(i, -1), i === 0),
+                네모('▼','아래로', () => 영역옮기기(i, 1), i === 커스텀.length - 1),
+                네모('✎','고치기', () => 편집('영역:' + a.id)));
+      card.appendChild(줄);
+    });
+    if (설정편집 === '새영역') card.appendChild(영역고치기틀(null));
+    else {
+      const 더하기 = 요소('button','글자단추','+ 영역 추가');
+      더하기.addEventListener('click', () => 편집('새영역'));
+      card.appendChild(더하기);
+    }
+    return card;
+  }
+
+  function 영역고치기틀(a) {
+    const 틀 = 요소('div','고치기틀');
+    const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 30;
+    inp.value = a ? a.이름 : ''; inp.placeholder = '영역 이름 (예: 건강)';
+    const 고른 = a ? Object.assign({}, a.기간) : { 일:true, 주:true, 분기:false, 연:false };
+    const 기간줄 = 요소('div','기간고르기');
+    기간종류.forEach(([k, 글]) => {
+      const b = 요소('button', 고른[k] ? '골라짐' : null, 글);
+      b.addEventListener('click', () => { 고른[k] = !고른[k]; b.classList.toggle('골라짐', 고른[k]); });
+      기간줄.appendChild(b);
+    });
+    const 단추줄 = 요소('div','단추줄');
+    const 저장 = 요소('button','작은단추', a ? '저장' : '추가');
+    const 취소 = 요소('button','옅은단추','취소');
+    저장.addEventListener('click', () => {
+      const 이름 = inp.value.trim();
+      if (!이름) { inp.focus(); return; }
+      if (!기간종류.some(([k]) => 고른[k])) { 알림('이 영역이 나올 회고를 하나 이상 골라 주세요.','err'); return; }
+      const 칸값 = Object.fromEntries(기간종류.map(([k]) => [k, 고른[k] ? 'O' : '']));
+      if (!a) {
+        const 새것 = { id: 새번호표('ct_'), 이름, 기본:false, 기간:고른,
+          순서: 자료.영역전체.reduce((m, x) => Math.max(m, x.순서), 0) + 1 };
+        자료.영역전체.push(새것); 편집(null);
+        저장하기(async () => {
+          const t = (await 탭읽기(['영역설정']))['영역설정'];
+          await 행붙이기('영역설정', t, Object.assign({ '영역ID':새것.id, '이름':이름, '기본/커스텀':'커스텀',
+            '순서':새것.순서, '수정시각':지금() }, 칸값));
+        }, () => '만들려던 영역: ' + 이름);
+        return;
+      }
+      // 적용 기간을 끄면 그 회고의 옛 기록이 화면에서 안 보인다 — 누르기 전에 알린다 (설계 5-7)
+      const 꺼짐 = 기간종류.filter(([k]) => a.기간[k] && !고른[k]).map(([, 글]) => 글);
+      if (꺼짐.length && !confirm('「' + a.이름 + '」 영역을 ' + 꺼짐.join('·') + ' 회고에서 끄면, 거기 적어 둔 이 영역의 옛 기록이 화면에서 안 보이게 됩니다.\n시트에는 그대로 남고, 다시 켜면 다시 보입니다.\n\n끌까요?')) return;
+      const 옛이름 = a.이름;
+      a.이름 = 이름; a.기간 = 고른; 편집(null);
+      저장하기(async () => {
+        await 고치기('영역설정', [{ 찾기:(행, v) => v(행,'영역ID') === a.id, 바꿀것:Object.assign({ '이름':이름, '수정시각':지금() }, 칸값) }]);
+        if (이름 !== 옛이름) await 사본고치기('영역', a.id, 이름);
+      }, () => 이름 !== 옛이름 ? '바꾸려던 이름: ' + 이름 + ' (원래: ' + 옛이름 + ')' : null);
+    });
+    취소.addEventListener('click', () => 편집(null));
+    단추줄.append(저장);
+    if (a) {
+      const 지우기 = 요소('button','옅은단추 지우기단추','지우기');
+      지우기.addEventListener('click', () => {
+        if (!confirm('「' + a.이름 + '」 영역을 지울까요?\n이 영역의 옛 기록과 주제가 화면에서 안 보이게 됩니다.\n시트에는 그대로 남고, 시트에서 「삭제」 글자를 지우면 되살아납니다.')) return;
+        자료.영역전체 = 자료.영역전체.filter(x => x !== a); 편집(null);
+        저장하기(() => 고치기('영역설정', [{ 찾기:(행, v) => v(행,'영역ID') === a.id, 바꿀것:{ '삭제됨':'삭제', '수정시각':지금() } }]));
+      });
+      단추줄.appendChild(지우기);
+    }
+    단추줄.appendChild(취소);
+    틀.append(inp, 기간줄, 요소('div','안내글','이 영역이 나올 회고'), 단추줄);
+    setTimeout(() => { if (!a) inp.focus(); }, 0);
+    return 틀;
+  }
+
+  // 순서 바꾸기는 늘 그 묶음 전체의 순서를 쓴다 — 빨리 여러 번 눌러 앞의 쓰기가 버려져도 마지막 것이 전부 담는다 (8h.9)
+  function 영역옮기기(i, d) {
+    const 커스텀 = 자료.영역전체.filter(a => !a.기본);
+    [커스텀[i], 커스텀[i + d]] = [커스텀[i + d], 커스텀[i]];
+    const 시작 = 자료.영역전체.filter(a => a.기본).reduce((m, a) => Math.max(m, a.순서), 0);
+    커스텀.forEach((a, j) => { a.순서 = 시작 + j + 1; });
+    자료.영역전체.sort((a, b) => a.순서 - b.순서);
+    화면그리기();
+    const 값들 = 커스텀.map(a => [a.id, a.순서]);
+    저장하기(() => 고치기('영역설정', 값들.map(([id, n]) => ({ 찾기:(행, v) => v(행,'영역ID') === id, 바꿀것:{ '순서':n } }))),
+      null, '영역순서');
+  }
+
+  // 주제 — 구분별로 묶어 보인다. 「핵심 목표·실행 초점」 「체질 초점」 다음에 영역(커스텀)이 순서대로 (설계 6장)
+  function 주제설정카드() {
+    const card = 요소('div','card');
+    card.appendChild(요소('div','영역이름','주제'));
+    const 묶음들 = [['목표·실행','핵심 목표·실행 초점'],['체질','체질 초점']]
+      .concat(자료.영역전체.filter(a => !a.기본).map(a => [a.id, a.이름]));
+    묶음들.forEach(([구분, 제목]) => {
+      card.appendChild(요소('div','묶음제목', 제목));
+      const 목록 = 구분주제들(구분, true);
+      목록.forEach((z, i) => {
+        if (설정편집 === '주제:' + z.id) { card.appendChild(주제고치기틀(z)); return; }
+        const 줄 = 요소('div','설정줄');
+        const 점단추 = 요소('button','점단추'); 점단추.setAttribute('aria-label', '색 바꾸기');
+        const 점 = 요소('span','점'); 점.style.background = 주제색(z); 점단추.appendChild(점);
+        점단추.addEventListener('click', () => 편집(설정편집 === '색:' + z.id ? null : '색:' + z.id));
+        줄.append(점단추, 요소('div','이름', z.이름),
+          네모('▲','위로', () => 주제옮기기(구분, i, -1), i === 0),
+          네모('▼','아래로', () => 주제옮기기(구분, i, 1), i === 목록.length - 1),
+          네모('✎','고치기', () => 편집('주제:' + z.id)));
+        card.appendChild(줄);
+        if (설정편집 === '색:' + z.id) card.appendChild(색판(z));
+      });
+      if (설정편집 === '새주제:' + 구분) card.appendChild(새주제틀(구분));
+      else {
+        const 더하기 = 요소('button','글자단추','+ 주제 추가');
+        더하기.addEventListener('click', () => 편집('새주제:' + 구분));
+        card.appendChild(더하기);
+      }
+    });
+
+    // 빼 둔 주제 — 지운 영역의 것은 안 보인다 (주제 행은 시트에 남는다)
+    const 묶음이름 = new Map(묶음들);
+    const 빼둔 = [...자료.주제맵.values()].filter(z => z.빼둠 && !z.지움 && 묶음이름.has(z.구분));
+    if (빼둔.length) {
+      const 머리 = 요소('button','글자단추', '빼 둔 주제 (' + 빼둔.length + ') ' + (빼둔펼침 ? '⌄' : '›'));
+      머리.style.cssText = 'display:block;margin-top:12px';
+      머리.addEventListener('click', () => { 빼둔펼침 = !빼둔펼침; 화면그리기(); });
+      card.appendChild(머리);
+      if (빼둔펼침) 빼둔.forEach(z => {
+        const 틀 = 요소('div','고치기틀');
+        if (설정편집 === '빼둔이름:' + z.id) { 틀.appendChild(이름고치기(z)); card.appendChild(틀); return; }
+        const 줄 = 요소('div','주제');
+        const 점 = 요소('span','점'); 점.style.background = 주제색(z);
+        줄.append(점, document.createTextNode(z.이름));
+        줄.style.cssText = 'font-size:14px;color:var(--fg);font-weight:400;margin:0';
+        틀.append(줄, 요소('div','안내글', 묶음이름.get(z.구분) + ' · 항목 ' + (자료.주제항목수.get(z.id) || 0) + '개'));
+        const 단추줄 = 요소('div','단추줄');
+        const 이름단추 = 요소('button','옅은단추','이름 바꾸기');
+        이름단추.addEventListener('click', () => 편집('빼둔이름:' + z.id));
+        const 넣기 = 요소('button','옅은단추','다시 넣기');
+        넣기.addEventListener('click', () => { 다시넣기(z); 화면그리기(); });
+        단추줄.append(이름단추, 넣기, 주제지우기단추(z));
+        틀.appendChild(단추줄);
+        card.appendChild(틀);
+      });
+    }
+    return card;
+  }
+
+  // 이름 바꾸기 틀 — 저장하면 주제설정의 이름과 기록 행의 사본을 함께 고친다
+  function 이름고치기(z, 덧단추들) {
+    const 묶음 = 요소('div');
+    const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 40; inp.value = z.이름;
+    const 단추줄 = 요소('div','단추줄');
+    const 저장 = 요소('button','작은단추','저장');
+    const 취소 = 요소('button','옅은단추','취소');
+    저장.addEventListener('click', () => {
+      const 이름 = inp.value.trim();
+      if (!이름) { inp.focus(); return; }
+      if (이름 === z.이름) { 편집(null); return; }
+      const 옛이름 = z.이름;
+      z.이름 = 이름; 편집(null);
+      저장하기(async () => {
+        await 고치기('주제설정', [{ 찾기:(행, v) => v(행,'주제ID') === z.id, 바꿀것:{ '이름':이름, '수정시각':지금() } }]);
+        await 사본고치기('주제', z.id, 이름);
+      }, () => '바꾸려던 이름: ' + 이름 + ' (원래: ' + 옛이름 + ')');
+    });
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 저장.click(); });
+    취소.addEventListener('click', () => 편집(null));
+    단추줄.append(저장, ...(덧단추들 || []), 취소);
+    묶음.append(inp, 단추줄);
+    return 묶음;
+  }
+
+  function 주제지우기단추(z) {
+    const b = 요소('button','옅은단추 지우기단추','지우기');
+    b.addEventListener('click', () => {
+      if (!confirm('「' + z.이름 + '」 주제를 지울까요?\n옛 항목은 이 주제 이름을 단 채 그대로 보이지만, 새 주제를 만들 때 이어 쓰기 제안에는 다시 뜨지 않습니다.\n시트에는 그대로 남습니다.')) return;
+      z.지움 = true; 편집(null);
+      저장하기(() => 고치기('주제설정', [{ 찾기:(행, v) => v(행,'주제ID') === z.id, 바꿀것:{ '삭제됨':'삭제', '수정시각':지금() } }]));
+    });
+    return b;
+  }
+
+  function 주제고치기틀(z) {
+    const 틀 = 요소('div','고치기틀');
+    const 빼기 = 요소('button','옅은단추','목록에서 빼기');
+    빼기.addEventListener('click', () => {
+      z.빼둠 = true; 편집(null);
+      저장하기(() => 고치기('주제설정', [{ 찾기:(행, v) => v(행,'주제ID') === z.id, 바꿀것:{ '상태':'빼둠', '수정시각':지금() } }]));
+    });
+    틀.append(이름고치기(z, [빼기, 주제지우기단추(z)]),
+      요소('div','안내글','목록에서 빼면 회고 화면에 안 나옵니다. 옛 기록은 그대로이고, 새 주제를 만들 때 이어 쓰기로 제안됩니다.'));
+    return 틀;
+  }
+
+  function 색판(z) {
+    const 판 = 요소('div','색판');
+    색들.forEach(([이름, 색조]) => {
+      const b = 요소('button', 색이름(z) === 이름 ? '골라짐' : null);
+      const 점 = 요소('span','점'); 점.style.background = 색조;
+      b.append(점, document.createTextNode(이름));
+      b.addEventListener('click', () => {
+        z.색 = 이름; 편집(null);
+        저장하기(() => 고치기('주제설정', [{ 찾기:(행, v) => v(행,'주제ID') === z.id, 바꿀것:{ '색':이름, '수정시각':지금() } }]),
+          null, '색:' + z.id);
+      });
+      판.appendChild(b);
+    });
+    return 판;
+  }
+
+  function 새주제틀(구분) {
+    const 틀 = 요소('div','고치기틀');
+    const 줄 = 요소('div','입력줄');
+    const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 40; inp.placeholder = '주제 이름 (예: 신앙)';
+    const 추가 = 요소('button','작은단추','추가');
+    const 취소 = 요소('button','옅은단추','취소');
+    줄.append(inp, 추가, 취소);
+    const 제안칸 = 요소('div');
+    inp.addEventListener('input', () => {
+      제안칸.innerHTML = '';
+      const 글 = inp.value.trim();
+      if (!글) return;
+      구분주제들(구분).filter(z => z.빼둠 && z.이름.includes(글)).forEach(z => {
+        const 한줄 = 요소('div','제안', '전에 쓴 「' + z.이름 + '」 항목 ' + (자료.주제항목수.get(z.id) || 0) + '개');
+        const 넣기 = 요소('button', null, '다시 넣기');
+        넣기.addEventListener('click', () => { 다시넣기(z); 편집(null); });
+        한줄.appendChild(넣기);
+        제안칸.appendChild(한줄);
+      });
+    });
+    const 만들기 = () => {
+      const 이름 = inp.value.trim();
+      if (!이름) { inp.focus(); return; }
+      if (구분주제들(구분, true).some(z => z.이름 === 이름)) { 알림('「' + 이름 + '」 주제가 이미 있습니다.','err'); return; }
+      주제만들기(이름, 구분); 편집(null);
+    };
+    추가.addEventListener('click', 만들기);
+    inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 만들기(); });
+    취소.addEventListener('click', () => 편집(null));
+    틀.append(줄, 제안칸);
+    setTimeout(() => inp.focus(), 0);
+    return 틀;
+  }
+
+  function 주제옮기기(구분, i, d) {
+    const 목록 = 구분주제들(구분, true);
+    [목록[i], 목록[i + d]] = [목록[i + d], 목록[i]];
+    목록.forEach((z, j) => { z.순서 = j + 1; });
+    화면그리기();
+    const 값들 = 목록.map(z => [z.id, z.순서]);
+    저장하기(() => 고치기('주제설정', 값들.map(([id, n]) => ({ 찾기:(행, v) => v(행,'주제ID') === id, 바꿀것:{ '순서':n } }))),
+      null, '주제순서:' + 구분);
   }
 
   // 저장 중이거나 저장 안 한 글이 있으면 떠나기 전에 묻는다

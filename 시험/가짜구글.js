@@ -5,6 +5,7 @@
 //   __탭            지금 시트 내용 (탭 이름 → 줄 배열)
 //   __느림 = 700    요청마다 기다리는 시간(ms). 휴대폰 통신을 흉내 낸다 (검수 10번)
 //   __실패 = true   쓰기 요청을 전부 실패시킨다
+//   __요청수        지금까지 보낸 요청 수 (연타 합치기 확인용)
 (function () {
   const 오늘 = 자정(new Date());
   const 날 = n => 날짜글(하루뒤(오늘, n));
@@ -13,7 +14,10 @@
     '영역설정': [['영역ID','이름','기본/커스텀','일','주','분기','연','순서','수정시각','삭제됨'],
       ['base_action','실행 초점','기본','O','O','O','O','1','',''],
       ['base_constitution','체질 초점','기본','O','O','O','O','2','',''],
-      ['base_goal','핵심 목표','기본','','','O','O','3','','']],
+      ['base_goal','핵심 목표','기본','','','O','O','3','',''],
+      ['ct_health','건강','커스텀','O','O','','','4','','']],
+    // 옛 칸으로 만들어진 빈 주제설정 — 앱이 켜질 때 새 칸으로 바꿔 쓰는지 본다 (설계 5-7-1)
+    '주제설정': [['주제ID','영역ID','영역','이름','상태','순서','수정시각','삭제됨']],
     '계획항목': [['항목ID','기간 단위','기간','영역ID','영역','주제ID','주제','계획','평가','평가메모','이월횟수','순서','수정시각','삭제됨'],
       ['it_w1','주',이번주,'base_action','실행 초점','','','이번 주 계획 가','','','0','1','',''],
       ['it_w2','주',이번주,'base_action','실행 초점','','','이번 주 계획 나','','','0','2','',''],
@@ -26,13 +30,17 @@
       ['fb_y','일',날(-1),'base_action','실행 초점','어제 피드백','','']],
     '일기': [['일기ID','기간 단위','기간','내용','수정시각','삭제됨']]
   };
+  // 석 달치 건강 기록 — 영역 이름을 바꿀 때 사본을 한꺼번에 고치는 대기 시간을 본다
+  for (let n = -90; n <= 0; n++) 탭['계획항목'].push(['it_h' + (n + 90), '일', 날(n), 'ct_health', '건강', '', '', '산책 ' + (n + 90), n < 0 ? '했다' : '', '', '0', '1', '', '']);
   window.__탭 = 탭;
+  window.__요청수 = 0;
   window.__느림 = 700; window.__실패 = false;
   const 열번호 = s => { let n = 0; for (const c of s) n = n * 26 + (c.charCodeAt(0) - 64); return n - 1; };
   const 범위 = r => { const m = r.match(/^'(.+)'!([A-Z]+)(\d+)/); return { 탭: m[1], 열: 열번호(m[2]), 행: Number(m[3]) - 1 }; };
   const 응답 = (o, s) => new Response(JSON.stringify(o), { status: s || 200 });
   window.fetch = async (url, opt) => {
     url = decodeURIComponent(url);
+    window.__요청수++;
     await new Promise(r => setTimeout(r, window.__느림));
     if (window.__실패 && opt && opt.method === 'POST') return 응답({ error: '가짜 실패' }, 500);
     if (url.includes('/drive/v3/files?q=')) return 응답({ files: [{ id: 'S1', name: '가짜 시트' }] });
@@ -42,7 +50,10 @@
       return 응답({ valueRanges: rs.map(r => ({ values: 탭[범위(r).탭].map(x => x.map(v => String(v))) })) });
     }
     if (url.includes('values:batchUpdate')) {
-      JSON.parse(opt.body).data.forEach(d => { const p = 범위(d.range); const row = 탭[p.탭][p.행] || (탭[p.탭][p.행] = []); row[p.열] = d.values[0][0]; });
+      JSON.parse(opt.body).data.forEach(d => {
+        const p = 범위(d.range);
+        d.values.forEach((줄, i) => { const row = 탭[p.탭][p.행 + i] || (탭[p.탭][p.행 + i] = []); 줄.forEach((v, j) => { row[p.열 + j] = String(v); }); });
+      });
       return 응답({});
     }
     if (url.includes(':append')) {
