@@ -75,6 +75,8 @@
   .색판 button { display:flex; align-items:center; gap:4px; padding:4px 8px; border:1px solid var(--line); border-radius:14px; background:#fff; font-size:12px; color:var(--fg); }
   .색판 button.골라짐 { border-color:var(--fg); font-weight:600; }
   .안내글 { font-size:12px; color:var(--muted); margin-top:4px; }
+  .알려줌 { margin-top:8px; padding:8px 10px; border-radius:8px; background:var(--soft); color:#3d4a44; font-size:13px; line-height:1.5; }
+  .알려줌 button { display:block; margin:4px 0 0 auto; border:0; background:none; color:var(--accent); font-weight:600; font-size:12px; padding:0; }
   ul { list-style:none; margin:4px 0 0; padding:0; }
   li { padding:6px 0; border-bottom:1px solid var(--line); }
   li:last-child { border-bottom:0; }
@@ -971,6 +973,11 @@
   // ── 설정 화면 (설계 6장 「설정 화면」) ──
   // 설정편집: 지금 펼쳐 둔 고치기 틀. '새영역' · '영역:ID' · '새주제:구분' · '주제:ID' · '색:ID' · '빼둔이름:ID'
   let 설정편집 = null, 빼둔펼침 = false;
+  // 설정에서 주제를 처음 만들면 한 번만 알려 준다 — 항목을 누르는 길은 휴대폰에서 눈에 안 띈다.
+  // 주제를 안 쓰는 사람에게는 안 보인다 (8h.15). 「알겠습니다」를 누르면 이 기기에서 다시 안 뜬다
+  const 주제안내키 = 'pronote_주제안내';
+  let 주제안내보임 = false;
+  function 주제안내본적() { try { return !!localStorage.getItem(주제안내키); } catch (e) { return false; } }
   const 편집 = 값 => { 설정편집 = 값; 화면그리기(); };
   const 기간글 = 영 => 기간종류.filter(([k]) => 영.기간[k]).map(([k]) => k).join('·') || '어느 회고에도 안 나옴';
 
@@ -1093,7 +1100,18 @@
   function 주제설정카드() {
     const card = 요소('div','card');
     card.appendChild(요소('div','영역이름','주제'));
-    const 묶음들 = [['목표·실행','핵심 목표·실행 초점'],['체질','체질 초점']]
+    if (주제안내보임) {
+      const 알려줌 = 요소('div','알려줌', '회고 화면에서 항목을 누르면 주제를 붙이거나 바꿀 수 있습니다. 주제 묶음 아래 칸에 바로 적어도 그 주제가 붙습니다.');
+      const 알겠음 = 요소('button', null, '알겠습니다');
+      알겠음.addEventListener('click', () => {
+        주제안내보임 = false;
+        try { localStorage.setItem(주제안내키, '1'); } catch (e) {}
+        화면그리기();
+      });
+      알려줌.appendChild(알겠음);
+      card.appendChild(알려줌);
+    }
+    const 묶음들 =[['목표·실행','핵심 목표·실행 초점'],['체질','체질 초점']]
       .concat(자료.영역전체.filter(a => !a.기본).map(a => [a.id, a.이름]));
     묶음들.forEach(([구분, 제목]) => {
       card.appendChild(요소('div','묶음제목', 제목));
@@ -1235,7 +1253,9 @@
       const 이름 = inp.value.trim();
       if (!이름) { inp.focus(); return; }
       if (구분주제들(구분, true).some(z => z.이름 === 이름)) { 알림('「' + 이름 + '」 주제가 이미 있습니다.','err'); return; }
-      주제만들기(이름, 구분); 편집(null);
+      주제만들기(이름, 구분);
+      if (!주제안내본적()) 주제안내보임 = true;
+      편집(null);
     };
     추가.addEventListener('click', 만들기);
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 만들기(); });
