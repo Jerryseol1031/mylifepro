@@ -691,8 +691,38 @@
     try { localStorage.setItem(접음키, JSON.stringify([...s])); } catch (e) {}
   }
 
+  // 일간에서는 그 주의 주간 계획을 늘 보인다 — 접지 않고, 비어 있으면 「주간 계획 없음」 (사용자, 2026-10-04).
+  // 전날 기록은 아래 「참고」에서 접을 수 있다
   function 참고블록(영역, 자료, 보기) {
     const 상위 = 자료.상위항목.filter(h => h.영역ID === 영역.id);
+    if (보기.단위 === '일' && 영역.기간.주) {
+      const 묶음 = 요소('div');
+      const 고정 = 요소('div','참고');
+      고정.appendChild(요소('div','참고제목', '이번 주 계획 · ' + 보기.상위.이름.replace(/^주간 계획 · /, '')));
+      고정.firstChild.style.marginTop = '2px';
+      if (상위.length) 상위.forEach(h => {
+        const 줄 = 요소('div','참고줄');
+        const 주제 = 주제이름(h);
+        줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(h.계획 + (주제 ? ' · ' + 주제 : '')));
+        고정.appendChild(줄);
+      });
+      else {
+        const 없음 = 요소('div','참고줄', '주간 계획 없음 ');
+        const 가기 = 요소('button','글자단추','주간에서 세우기 ›');
+        가기.style.padding = '0';
+        가기.addEventListener('click', () => { if (넘겨도되나()) { 단위 = '주'; 그리기(); window.scrollTo(0, 0); } });
+        없음.appendChild(가기);
+        고정.appendChild(없음);
+      }
+      묶음.appendChild(고정);
+      const 나머지 = 참고접는칸(영역, 자료, 보기, []);
+      if (나머지) 묶음.appendChild(나머지);
+      return 묶음;
+    }
+    return 참고접는칸(영역, 자료, 보기, 상위);
+  }
+
+  function 참고접는칸(영역, 자료, 보기, 상위) {
     const 지난 = 자료.지난항목.filter(h => h.영역ID === 영역.id);
     const 지난피드백 = 자료.지난피드백[영역.id] || '';
     if (!상위.length && !지난.length && !지난피드백) return null;   // 참고할 것이 없으면 줄째 안 보인다
