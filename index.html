@@ -749,7 +749,7 @@
     const 순서중 = 순서모드.has(영역.id);
     const 제목줄 = 요소('div','칸제목', '계획');
     if (항목들.length > 1 || (순서중)) {
-      const 순서단추 = 요소('button','순서단추', 순서중 ? '완료' : '순서');
+      const 순서단추 = 요소('button','순서단추', 순서중 ? '완료' : '순서 변경');
       순서단추.addEventListener('click', () => { 순서중 ? 순서모드.delete(영역.id) : 순서모드.add(영역.id); 화면그리기(); });
       제목줄.appendChild(순서단추);
     }
@@ -973,6 +973,15 @@
     칩그리기();
     inp.addEventListener('focus', () => { 칩줄.style.display = ''; });
     if (추가주제.has(영역.id)) 칩줄.style.display = '';
+    // 다른 곳을 누르면 칩을 접고 고른 주제도 푼다 — 안 보이는 채로 고른 주제가 남으면 엉뚱한 주제로 저장된다 (8h.15)
+    틀.addEventListener('focusout', ev => {
+      if (ev.relatedTarget && 틀.contains(ev.relatedTarget)) return;   // 새 주제 이름 칸 등 이 틀 안으로 옮긴 것
+      setTimeout(() => {
+        if (!틀.isConnected || 틀.contains(document.activeElement)) return;   // 화면을 다시 그려 사라진 틀은 건드리지 않는다
+        칩줄.style.display = 'none';
+        if (추가주제.has(영역.id)) { 추가주제.delete(영역.id); 칩그리기(); }
+      }, 0);
+    });
     const 추가 = () => {
       const 글 = inp.value.trim();
       if (!글) { inp.focus(); return; }
