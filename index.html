@@ -97,6 +97,13 @@
   .평가들 button.골라짐[aria-label="일부"]   { background:#e0a920; border-color:#e0a920; }
   .평가들 button.골라짐[aria-label="못했다"] { background:#d9534f; border-color:#d9534f; }
   .추가주제 { margin-top:6px; }
+  .칸제목 { display:flex; justify-content:space-between; align-items:center; }
+  .순서단추 { border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--accent); font-size:12px; font-weight:600; padding:3px 10px; }
+  .묶음머리 { display:flex; align-items:center; gap:4px; }
+  .묶음머리 .묶음제목단추 { flex:1; color:var(--fg); opacity:1; cursor:default; }
+  .새주제칩 { border-style:dashed !important; color:var(--muted) !important; }
+  .새주제줄 { display:flex; gap:5px; margin-top:6px; }
+  .새주제줄 input { padding:6px 9px !important; font-size:13px !important; }
   .추가주제 .칩 { padding:4px 9px; font-size:12px; }
   .쪼개기 { font-size:11px; color:var(--warn); margin-top:3px; }
 
@@ -738,17 +745,42 @@
     const 참고 = 참고블록(영역, 자료, 보기);
     if (참고) card.appendChild(참고);
 
-    card.appendChild(요소('div','칸제목','계획'));
+    // 계획 제목 옆 「순서」 — 누르면 평가 단추 자리에 ▲▼가 나와 항목·주제 순서를 바꾼다
+    const 순서중 = 순서모드.has(영역.id);
+    const 제목줄 = 요소('div','칸제목', '계획');
+    if (항목들.length > 1 || (순서중)) {
+      const 순서단추 = 요소('button','순서단추', 순서중 ? '완료' : '순서');
+      순서단추.addEventListener('click', () => { 순서중 ? 순서모드.delete(영역.id) : 순서모드.add(영역.id); 화면그리기(); });
+      제목줄.appendChild(순서단추);
+    }
+    card.appendChild(제목줄);
     // 주제 없는 항목은 제목 없이 맨 위 (8h.15). 그 아래 주제 묶음, 맨 아래 입력칸
-    const 목록 = 묶음항목들 => { const ul = 요소('ul'); 묶음항목들.forEach(h => ul.appendChild(항목줄(h, 영역))); return ul; };
+    const 덩어리들 = [];   // 화면에 보이는 차례대로의 항목 묶음들 — 순서를 바꾸면 이 차례로 1, 2, 3… 다시 매긴다
+    const 목록 = 묶음항목들 => {
+      덩어리들.push(묶음항목들);
+      const ul = 요소('ul');
+      묶음항목들.forEach((h, i) => ul.appendChild(항목줄(h, 영역, !순서중 ? null : {
+        위: i > 0 ? () => 항목옮기기(영역, 덩어리들, 묶음항목들, i, -1) : null,
+        아래: i < 묶음항목들.length - 1 ? () => 항목옮기기(영역, 덩어리들, 묶음항목들, i, 1) : null })));
+      return ul;
+    };
     const 주제없는 = 항목들.filter(h => !h.주제ID);
     if (주제없는.length) card.appendChild(목록(주제없는));
     // 이 기간에 항목이 붙은 주제만 묶음으로 보인다 — 목록에 있는 주제 순서대로, 빼 둔·지운 주제는 그 뒤에
-    const 목록주제 = 구분주제들(영역구분(영역.id), true);
+    const 구분 = 영역구분(영역.id);
+    const 목록주제 = 구분주제들(구분, true);
     const 붙은ID = new Set(항목들.map(h => h.주제ID).filter(Boolean));
-    const 차례 = 목록주제.filter(z => 붙은ID.has(z.id)).map(z => z.id)
-      .concat([...붙은ID].filter(id => !목록주제.some(z => z.id === id)));
-    차례.forEach(id => card.appendChild(주제묶음(id, 항목들.filter(h => h.주제ID === id), 영역, 목록)));
+    const 보이는목록주제 = 목록주제.filter(z => 붙은ID.has(z.id));
+    const 차례 = 보이는목록주제.map(z => z.id).concat([...붙은ID].filter(id => !목록주제.some(z => z.id === id)));
+    차례.forEach(id => {
+      const k = 보이는목록주제.findIndex(z => z.id === id);
+      const 옮김 = !순서중 || k < 0 ? null : {
+        위: k > 0 ? () => 주제끼워옮기기(구분, 보이는목록주제[k], 보이는목록주제[k - 1], -1) : null,
+        아래: k < 보이는목록주제.length - 1 ? () => 주제끼워옮기기(구분, 보이는목록주제[k], 보이는목록주제[k + 1], 1) : null };
+      card.appendChild(주제묶음(id, 항목들.filter(h => h.주제ID === id), 영역, 목록, 옮김));
+    });
+    if (순서중 && 보이는목록주제.length > 1) card.appendChild(요소('div','안내글',
+      '주제 순서는 ' + (구분 === '목표·실행' ? '핵심 목표·실행 초점의 모든 기간' : '이 영역의 모든 기간') + '에 함께 적용됩니다.'));
     card.appendChild(추가줄(영역));
 
     // 피드백 — 항목이 있거나 이미 쓴 글이 있을 때만 펼친다 (처음 켠 사람의 화면을 가볍게)
@@ -771,9 +803,36 @@
     return card;
   }
 
+  // ── 순서 바꾸기 (회고 화면) ──
+  const 순서모드 = new Set();   // 순서를 바꾸는 중인 영역ID
+  // 항목: 그 묶음 안에서만 옮기고, 영역 안 이 기간의 항목 전체를 화면 차례대로 1, 2, 3… 다시 매겨 통째로 쓴다 (8h.9 연타 합치기)
+  function 항목옮기기(영역, 덩어리들, 묶음, i, d) {
+    [묶음[i], 묶음[i + d]] = [묶음[i + d], 묶음[i]];
+    const 전체 = [].concat(...덩어리들);
+    전체.forEach((h, j) => { h.순서 = j + 1; });
+    자료.항목들.sort((a, b) => a.순서 - b.순서);
+    화면그리기();
+    const 값들 = 전체.map(h => [h.id, h.순서]);
+    저장하기(() => 고치기('계획항목', 값들.map(([id, n]) => ({ 찾기:(행, v) => v(행,'항목ID') === id, 바꿀것:{ '순서':n } }))),
+      null, '항목순서:' + 영역.id + ':' + 보기.단위 + ':' + 보기.기간);
+  }
+  // 주제: 화면에 보이는 이웃 주제의 앞(▲)이나 뒤(▼)로 끼워 넣는다. 주제설정의 순서라 모든 기간에 적용된다
+  function 주제끼워옮기기(구분, z, 이웃, d) {
+    const 목록 = 구분주제들(구분, true).filter(x => x !== z);
+    목록.splice(목록.indexOf(이웃) + (d > 0 ? 1 : 0), 0, z);
+    주제순서저장(구분, 목록);
+  }
+  function 주제순서저장(구분, 목록) {
+    목록.forEach((z, j) => { z.순서 = j + 1; });
+    화면그리기();
+    const 값들 = 목록.map(z => [z.id, z.순서]);
+    저장하기(() => 고치기('주제설정', 값들.map(([id, n]) => ({ 찾기:(행, v) => v(행,'주제ID') === id, 바꿀것:{ '순서':n } }))),
+      null, '주제순서:' + 구분);
+  }
+
   // 주제 묶음. 색 막대로 한 덩어리임을 보이고, 제목을 누르면 이름 바꾸기·다른 주제로 옮기기
   const 펼친묶음 = { 열쇠: null, 할일: null };   // 지금 펼친 제목 메뉴 (다시 그려도 남긴다)
-  function 주제묶음(id, 묶음항목들, 영역, 목록) {
+  function 주제묶음(id, 묶음항목들, 영역, 목록, 옮김) {
     const z = 자료.주제맵.get(id);
     const 열쇠 = 영역.id + ':' + id;
     const 틀 = 요소('div','묶음');
@@ -787,8 +846,13 @@
       const 열림 = 펼친묶음.열쇠 === 열쇠;
       펼친묶음.열쇠 = 열림 ? null : 열쇠; 펼친묶음.할일 = null; 화면그리기();
     });
-    틀.appendChild(제목);
-    if (펼친묶음.열쇠 === 열쇠) 틀.appendChild(묶음메뉴(z, 묶음항목들, 영역));
+    if (옮김) {
+      const 머리 = 요소('div','묶음머리');
+      제목.disabled = true;   // 순서를 바꾸는 동안은 메뉴를 안 연다
+      머리.append(제목, 네모('▲','주제 위로', 옮김.위 || (() => {}), !옮김.위), 네모('▼','주제 아래로', 옮김.아래 || (() => {}), !옮김.아래));
+      틀.appendChild(머리);
+    } else 틀.appendChild(제목);
+    if (펼친묶음.열쇠 === 열쇠 && !옮김) 틀.appendChild(묶음메뉴(z, 묶음항목들, 영역));
     틀.appendChild(목록(묶음항목들));
     return 틀;
   }
@@ -874,13 +938,41 @@
         });
         칩줄.appendChild(b);
       });
+      // 「+ 새 주제」 — 이 영역의 구분에 주제를 바로 만든다. 입력칸을 눌렀을 때만 보이므로 주제를 안 쓰는 사람에게도 가볍다
+      const 새 = 요소('button','칩 새주제칩','+ 새 주제');
+      새.addEventListener('mousedown', ev => ev.preventDefault());
+      새.addEventListener('click', () => 새주제열기());
+      칩줄.appendChild(새);
+    };
+    const 새주제열기 = () => {
+      칩줄.innerHTML = '';
+      const 줄2 = 요소('div','새주제줄');
+      const 이름칸 = 요소('input'); 이름칸.type = 'text'; 이름칸.maxLength = 40; 이름칸.placeholder = '새 주제 이름';
+      const 만들기 = 요소('button','옅은단추','만들기');
+      const 취소 = 요소('button','옅은단추','취소');
+      const 만들기함 = () => {
+        const 이름 = 이름칸.value.trim();
+        if (!이름) { 이름칸.focus(); return; }
+        // 같은 이름이 목록에 있으면 그것을, 빼 둔 주제에 있으면 다시 넣어 이어 쓴다 (같은 번호표)
+        const 구분 = 영역구분(영역.id);
+        let z = 구분주제들(구분, true).find(x => x.이름 === 이름);
+        const 빼둔 = !z && 구분주제들(구분).find(x => x.빼둠 && x.이름 === 이름);
+        if (빼둔) { 다시넣기(빼둔); z = 빼둔; }
+        if (!z) z = 주제만들기(이름, 구분);
+        추가주제.set(영역.id, z.id);
+        다시초점 = 영역.id; 화면그리기();
+      };
+      만들기.addEventListener('click', 만들기함);
+      이름칸.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 만들기함(); });
+      취소.addEventListener('click', () => { 칩그리기(); inp.focus(); });
+      줄2.append(이름칸, 만들기, 취소);
+      칩줄.appendChild(줄2);
+      이름칸.focus();
     };
     칩줄.style.display = 'none';
-    if (목록주제.length) {
-      칩그리기();
-      inp.addEventListener('focus', () => { 칩줄.style.display = ''; });
-      if (추가주제.has(영역.id)) 칩줄.style.display = '';
-    }
+    칩그리기();
+    inp.addEventListener('focus', () => { 칩줄.style.display = ''; });
+    if (추가주제.has(영역.id)) 칩줄.style.display = '';
     const 추가 = () => {
       const 글 = inp.value.trim();
       if (!글) { inp.focus(); return; }
@@ -904,11 +996,18 @@
     return 틀;
   }
 
-  function 항목줄(h, 영역) {
+  function 항목줄(h, 영역, 옮김) {
     const li = 요소('li');
     const 줄 = 요소('div','항목줄');
     const 글 = 요소('div','항목글', h.계획);
     if (h.이월) 글.appendChild(요소('span','꼬리표', '이월 ' + h.이월));
+    if (옮김) {   // 순서 바꾸는 중 — 평가 단추 자리에 ▲▼. 잘못 눌러 평가가 바뀌지 않게 평가는 숨긴다
+      const 단추들 = 요소('div','평가들');
+      단추들.append(네모('▲','위로', 옮김.위 || (() => {}), !옮김.위), 네모('▼','아래로', 옮김.아래 || (() => {}), !옮김.아래));
+      줄.append(글, 단추들);
+      li.appendChild(줄);
+      return li;
+    }
     글.title = '눌러서 고치기 · 주제 붙이기';
     글.addEventListener('click', () => li.replaceWith(항목고치기줄(h, li, 영역)));
 
@@ -1369,11 +1468,7 @@
   function 주제옮기기(구분, i, d) {
     const 목록 = 구분주제들(구분, true);
     [목록[i], 목록[i + d]] = [목록[i + d], 목록[i]];
-    목록.forEach((z, j) => { z.순서 = j + 1; });
-    화면그리기();
-    const 값들 = 목록.map(z => [z.id, z.순서]);
-    저장하기(() => 고치기('주제설정', 값들.map(([id, n]) => ({ 찾기:(행, v) => v(행,'주제ID') === id, 바꿀것:{ '순서':n } }))),
-      null, '주제순서:' + 구분);
+    주제순서저장(구분, 목록);
   }
 
   // 저장 중이거나 저장 안 한 글이 있으면 떠나기 전에 묻는다
