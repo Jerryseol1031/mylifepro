@@ -78,14 +78,26 @@
   .알려줌 { margin-top:8px; padding:8px 10px; border-radius:8px; background:var(--soft); color:#3d4a44; font-size:13px; line-height:1.5; }
   .알려줌 button { display:block; margin:4px 0 0 auto; border:0; background:none; color:var(--accent); font-weight:600; font-size:12px; padding:0; }
   ul { list-style:none; margin:4px 0 0; padding:0; }
-  li { padding:6px 0; border-bottom:1px solid var(--line); }
-  li:last-child { border-bottom:0; }
+  /* 항목 하나 = 글 + 평가가 한 덩어리 (작은 상자) */
+  li { padding:7px 8px 7px 10px; margin-top:6px; background:var(--bg); border:1px solid var(--line); border-radius:9px; }
+  /* 주제 묶음 = 주제 색 막대로 묶는다. 제목을 누르면 이름 바꾸기·옮기기 */
+  .묶음 { margin-top:12px; padding-left:10px; border-left:3px solid var(--line); }
+  .묶음 > ul { margin-top:2px; }
+  .묶음제목단추 { display:flex; align-items:center; gap:6px; border:0; background:none; padding:2px 0; font-size:13px; font-weight:700; color:var(--fg); }
+  .묶음제목단추 .점 { width:10px; height:10px; }
+  .묶음제목단추 .곁 { font-size:11px; font-weight:400; color:var(--muted); }
+  .묶음메뉴 { margin-top:6px; padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; }
   .항목줄 { display:flex; align-items:center; gap:6px; }
   .항목글 { flex:1; min-width:0; font-size:14px; line-height:1.45; word-break:break-word; cursor:pointer; }
   .꼬리표 { display:inline-block; font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:5px; padding:0 4px; margin-left:4px; vertical-align:1px; }
   .평가들 { display:flex; gap:3px; flex:none; }
   .평가들 button { width:30px; height:30px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--muted); font-size:13px; padding:0; }
-  .평가들 button.골라짐 { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .평가들 button.골라짐 { color:#fff; }
+  .평가들 button.골라짐[aria-label="했다"]   { background:#3b73c4; border-color:#3b73c4; }
+  .평가들 button.골라짐[aria-label="일부"]   { background:#e0a920; border-color:#e0a920; }
+  .평가들 button.골라짐[aria-label="못했다"] { background:#d9534f; border-color:#d9534f; }
+  .추가주제 { margin-top:6px; }
+  .추가주제 .칩 { padding:4px 9px; font-size:12px; }
   .쪼개기 { font-size:11px; color:var(--warn); margin-top:3px; }
 
   .입력줄 { display:flex; gap:6px; margin-top:8px; }
@@ -452,7 +464,7 @@
       const 주 = 주정보(보는날), 전날 = 하루뒤(보는날, -1);
       return { 단위:'일', 기간: 날짜글(보는날), 제목: 날짜표시(보는날),
         꼬리: {'-1':'어제', '0':'오늘', '1':'내일'}[String(며칠차이(보는날))] || '',
-        지금인가: 며칠차이(보는날) === 0, 안내: '할 일 한 줄',
+        지금인가: 며칠차이(보는날) === 0, 안내: '항목 한 줄',
         상위: { 단위:'주', 기간: 주.기간, 이름: '주간 계획 · ' + 주.이름 },
         지난: { 단위:'일', 기간: 날짜글(전날), 이름: '전날 · ' + 짧은날짜(전날) } };
     }
@@ -460,7 +472,7 @@
     const 차이 = Math.round((주.월요일 - 월요일(오늘)) / (7*하루));
     return { 단위:'주', 기간: 주.기간, 제목: 주.연 + '년 ' + 주.이름,
       꼬리: 주.범위 + ({'-1':' · 지난주', '0':' · 이번 주', '1':' · 다음 주'}[String(차이)] || ''),
-      지금인가: 차이 === 0, 안내: '이번 주 할 일 한 줄',
+      지금인가: 차이 === 0, 안내: '이번 주 항목 한 줄',
       상위: { 단위:'분기', 기간: 주.분기, 이름: '분기 계획 · ' + 주.연 + '년 ' + 주.분기.slice(-1) + '분기' },
       지난: { 단위:'주', 기간: 전주.기간, 이름: '전주 · ' + 전주.이름 } };
   }
@@ -727,26 +739,17 @@
     if (참고) card.appendChild(참고);
 
     card.appendChild(요소('div','칸제목','계획'));
-    // 주제 없는 항목은 제목 없이 맨 위, 그 아래 입력칸 (8h.15)
+    // 주제 없는 항목은 제목 없이 맨 위 (8h.15). 그 아래 주제 묶음, 맨 아래 입력칸
     const 목록 = 묶음항목들 => { const ul = 요소('ul'); 묶음항목들.forEach(h => ul.appendChild(항목줄(h, 영역))); return ul; };
     const 주제없는 = 항목들.filter(h => !h.주제ID);
     if (주제없는.length) card.appendChild(목록(주제없는));
-    card.appendChild(추가줄(영역, null));
-    // 그 구분의 「목록에 있는」 주제마다 묶음과 입력칸. 주제를 안 쓰는 사람에게는 아무것도 안 생긴다
+    // 이 기간에 항목이 붙은 주제만 묶음으로 보인다 — 목록에 있는 주제 순서대로, 빼 둔·지운 주제는 그 뒤에
     const 목록주제 = 구분주제들(영역구분(영역.id), true);
-    목록주제.forEach(z => {
-      card.appendChild(주제제목(z, z.이름));
-      const 묶음 = 항목들.filter(h => h.주제ID === z.id);
-      if (묶음.length) card.appendChild(목록(묶음));
-      card.appendChild(추가줄(영역, z));
-    });
-    // 빼 둔·지운 주제라도 이 기간에 붙은 항목이 있으면 묶음은 보인다 (입력칸 없이)
-    const 남은ID = [...new Set(항목들.filter(h => h.주제ID && !목록주제.some(z => z.id === h.주제ID)).map(h => h.주제ID))];
-    남은ID.forEach(id => {
-      const 묶음 = 항목들.filter(h => h.주제ID === id);
-      card.appendChild(주제제목(자료.주제맵.get(id), 주제이름(묶음[0])));
-      card.appendChild(목록(묶음));
-    });
+    const 붙은ID = new Set(항목들.map(h => h.주제ID).filter(Boolean));
+    const 차례 = 목록주제.filter(z => 붙은ID.has(z.id)).map(z => z.id)
+      .concat([...붙은ID].filter(id => !목록주제.some(z => z.id === id)));
+    차례.forEach(id => card.appendChild(주제묶음(id, 항목들.filter(h => h.주제ID === id), 영역, 목록)));
+    card.appendChild(추가줄(영역));
 
     // 피드백 — 항목이 있거나 이미 쓴 글이 있을 때만 펼친다 (처음 켠 사람의 화면을 가볍게)
     const 쓴글 = 자료.피드백[영역.id] || '';
@@ -768,27 +771,121 @@
     return card;
   }
 
-  function 주제제목(z, 이름) {
-    const 제목 = 요소('div','주제');
+  // 주제 묶음. 색 막대로 한 덩어리임을 보이고, 제목을 누르면 이름 바꾸기·다른 주제로 옮기기
+  const 펼친묶음 = { 열쇠: null, 할일: null };   // 지금 펼친 제목 메뉴 (다시 그려도 남긴다)
+  function 주제묶음(id, 묶음항목들, 영역, 목록) {
+    const z = 자료.주제맵.get(id);
+    const 열쇠 = 영역.id + ':' + id;
+    const 틀 = 요소('div','묶음');
+    틀.style.borderLeftColor = 주제색(z);
+    const 제목 = 요소('button','묶음제목단추');
     const 점 = 요소('span','점'); 점.style.background = 주제색(z);
-    제목.append(점, document.createTextNode(이름));
-    return 제목;
+    제목.append(점, document.createTextNode(주제이름(묶음항목들[0])));
+    if (!z || z.지움) 제목.appendChild(요소('span','곁', '(지운 주제)'));
+    else if (z.빼둠) 제목.appendChild(요소('span','곁', '(빼 둔 주제)'));
+    제목.addEventListener('click', () => {
+      const 열림 = 펼친묶음.열쇠 === 열쇠;
+      펼친묶음.열쇠 = 열림 ? null : 열쇠; 펼친묶음.할일 = null; 화면그리기();
+    });
+    틀.appendChild(제목);
+    if (펼친묶음.열쇠 === 열쇠) 틀.appendChild(묶음메뉴(z, 묶음항목들, 영역));
+    틀.appendChild(목록(묶음항목들));
+    return 틀;
   }
 
-  // 할 일 한 줄 입력칸. 주제 묶음 안의 칸에 적으면 그 주제가 붙는다
-  function 추가줄(영역, z) {
+  function 묶음메뉴(z, 묶음항목들, 영역) {
+    const 메뉴 = 요소('div','묶음메뉴');
+    const 닫기 = () => { 펼친묶음.열쇠 = null; 펼친묶음.할일 = null; 화면그리기(); };
+    if (펼친묶음.할일 === '이름' && z) {
+      // 이름 바꾸기 — 설정과 같다. 지난 기록에 붙은 이름까지 모두 바뀐다
+      메뉴.appendChild(이름고치기(z, null, 닫기));
+      메뉴.appendChild(요소('div','안내글','이름을 바꾸면 지난 기록의 주제 이름도 함께 바뀝니다.'));
+      return 메뉴;
+    }
+    if (펼친묶음.할일 === '옮기기') {
+      // 다른 주제로 옮기기 — 이 화면(이 날·이 주)의 이 묶음 항목만 옮긴다. 지난 기록은 그대로
+      메뉴.appendChild(요소('div','고르개제목', '이 ' + (보기.단위 === '일' ? '날' : '주') + '의 항목 ' + 묶음항목들.length + '개를 옮길 주제'));
+      const 칩줄 = 요소('div','칩줄');
+      const 옮기기 = 새것 => {
+        묶음항목들.forEach(h => { h.주제ID = 새것 ? 새것.id : ''; h.주제사본 = 새것 ? 새것.이름 : ''; });
+        const 값 = { '주제ID': 새것 ? 새것.id : '', '주제': 새것 ? 새것.이름 : '', '수정시각': 지금() };
+        const ids = 묶음항목들.map(h => h.id);
+        닫기();
+        저장하기(() => 고치기('계획항목', ids.map(id => ({ 찾기:(행, v) => v(행,'항목ID') === id, 바꿀것:값 }))));
+      };
+      구분주제들(영역구분(영역.id), true).filter(x => x !== z).forEach(x => {
+        const b = 요소('button','칩');
+        const 점 = 요소('span','점'); 점.style.background = 주제색(x);
+        b.append(점, document.createTextNode(x.이름));
+        b.addEventListener('click', () => 옮기기(x));
+        칩줄.appendChild(b);
+      });
+      const 없음 = 요소('button','칩','주제 없음');
+      없음.addEventListener('click', () => 옮기기(null));
+      칩줄.appendChild(없음);
+      메뉴.appendChild(칩줄);
+      메뉴.appendChild(요소('div','안내글','지난 기록은 그대로입니다. 새 주제는 설정에서 만듭니다.'));
+      const 취소 = 요소('button','글자단추','취소'); 취소.addEventListener('click', 닫기);
+      메뉴.appendChild(취소);
+      return 메뉴;
+    }
+    const 단추줄 = 요소('div','단추줄'); 단추줄.style.marginTop = '0';
+    if (z && !z.지움) {
+      const 이름 = 요소('button','옅은단추','이름 바꾸기');
+      이름.addEventListener('click', () => { 펼친묶음.할일 = '이름'; 화면그리기(); });
+      단추줄.appendChild(이름);
+    }
+    const 옮김 = 요소('button','옅은단추','다른 주제로 옮기기');
+    옮김.addEventListener('click', () => { 펼친묶음.할일 = '옮기기'; 화면그리기(); });
+    const 설정으로 = 요소('button','옅은단추','설정');
+    설정으로.addEventListener('click', () => { if (!안쓴글.size || confirm('저장하지 않은 글이 있습니다. 그래도 설정으로 갈까요?')) { 펼친묶음.열쇠 = null; 설정열기(); } });
+    단추줄.append(옮김, 설정으로);
+    메뉴.appendChild(단추줄);
+    return 메뉴;
+  }
+
+  // 항목 한 줄 입력칸 — 영역 맨 아래. 칸을 누르면 그 아래 주제 칩이 펼쳐지고, 고르면 그 주제가 붙는다.
+  // 고른 주제는 추가할 때마다 「없음」으로 돌아간다 — 고른 채로 남으면 다음 항목이 엉뚱한 주제로 저장된다 (8h.15)
+  const 추가주제 = new Map();   // 영역ID → 고른 주제ID (다시 그려도 남긴다)
+  function 추가줄(영역) {
+    const 틀 = 요소('div');
     const 줄 = 요소('div','입력줄');
-    const 칸열쇠 = 영역.id + (z ? ':' + z.id : '');
+    const 칸열쇠 = 영역.id;
     const 추가열쇠 = '추가:' + 칸열쇠;
     const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200;
     inp.dataset.추가 = 칸열쇠;
-    inp.placeholder = z ? z.이름 + ' 할 일 한 줄' : 보기.안내;
+    inp.placeholder = 보기.안내;
     inp.value = 안쓴글.get(추가열쇠) || '';
     inp.addEventListener('input', () => { inp.value.trim() ? 안쓴글.set(추가열쇠, inp.value) : 안쓴글.delete(추가열쇠); });
     const btn = 요소('button','작은단추','추가');
+    // 주제 칩 — 그 구분의 「목록에 있는」 주제가 있을 때만. 주제를 안 쓰는 사람에게는 안 생긴다
+    const 목록주제 = 구분주제들(영역구분(영역.id), true);
+    const 칩줄 = 요소('div','칩줄 추가주제');
+    const 칩그리기 = () => {
+      칩줄.innerHTML = '';
+      목록주제.forEach(x => {
+        const b = 요소('button', '칩' + (추가주제.get(영역.id) === x.id ? ' 골라짐' : ''));
+        const 점 = 요소('span','점'); 점.style.background = 주제색(x);
+        b.append(점, document.createTextNode(x.이름));
+        b.addEventListener('mousedown', ev => ev.preventDefault());   // 눌러도 입력칸 초점이 안 빠지게
+        b.addEventListener('click', () => {
+          추가주제.get(영역.id) === x.id ? 추가주제.delete(영역.id) : 추가주제.set(영역.id, x.id);
+          칩그리기(); inp.focus();
+        });
+        칩줄.appendChild(b);
+      });
+    };
+    칩줄.style.display = 'none';
+    if (목록주제.length) {
+      칩그리기();
+      inp.addEventListener('focus', () => { 칩줄.style.display = ''; });
+      if (추가주제.has(영역.id)) 칩줄.style.display = '';
+    }
     const 추가 = () => {
       const 글 = inp.value.trim();
       if (!글) { inp.focus(); return; }
+      const z = 목록주제.find(x => x.id === 추가주제.get(영역.id)) || null;
+      추가주제.delete(영역.id);
       const h = { id: 새번호표('it_'), 영역ID: 영역.id, 주제ID: z ? z.id : '', 주제사본: z ? z.이름 : '', 계획: 글, 평가: '', 이월: 0,
         순서: 자료.항목들.filter(x => x.영역ID === 영역.id).reduce((m, x) => Math.max(m, x.순서), 0) + 1 };
       const 단 = 보기.단위, 간 = 보기.기간;
@@ -799,10 +896,12 @@
           '주제ID':h.주제ID, '주제':h.주제사본, '계획':글, '이월횟수':0, '순서':h.순서, '수정시각':지금() });
       }, () => { 안쓴글.set(추가열쇠, 글); });   // 실패하면 적은 글을 입력칸에 되돌린다
     };
+    btn.addEventListener('mousedown', ev => ev.preventDefault());
     btn.addEventListener('click', 추가);
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 추가(); });
     줄.append(inp, btn);
-    return 줄;
+    틀.append(줄, 칩줄);
+    return 틀;
   }
 
   function 항목줄(h, 영역) {
@@ -1101,7 +1200,7 @@
     const card = 요소('div','card');
     card.appendChild(요소('div','영역이름','주제'));
     if (주제안내보임) {
-      const 알려줌 = 요소('div','알려줌', '회고 화면에서 항목을 누르면 주제를 붙이거나 바꿀 수 있습니다. 주제 묶음 아래 칸에 바로 적어도 그 주제가 붙습니다.');
+      const 알려줌 = 요소('div','알려줌', '회고 화면에서 항목을 추가할 때 입력칸을 누르면 주제를 고를 수 있습니다. 이미 적은 항목은 눌러서 주제를 붙이거나 바꿉니다.');
       const 알겠음 = 요소('button', null, '알겠습니다');
       알겠음.addEventListener('click', () => {
         주제안내보임 = false;
@@ -1167,7 +1266,9 @@
   }
 
   // 이름 바꾸기 틀 — 저장하면 주제설정의 이름과 기록 행의 사본을 함께 고친다
-  function 이름고치기(z, 덧단추들) {
+  // 설정과 회고 화면(주제 묶음 제목)이 함께 쓴다. 닫기를 안 주면 설정의 고치기 틀을 닫는다
+  function 이름고치기(z, 덧단추들, 닫기) {
+    const 편집 = 닫기 ? (() => 닫기()) : (() => { 설정편집 = null; 화면그리기(); });
     const 묶음 = 요소('div');
     const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 40; inp.value = z.이름;
     const 단추줄 = 요소('div','단추줄');
