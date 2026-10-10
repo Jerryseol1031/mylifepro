@@ -23,6 +23,13 @@
 <p class="안내">[4-4] 사용 승인 착수 전 시험용 임시 페이지입니다. 기록 시트는 건드리지 않습니다. 시험이 끝나면 지웁니다.</p>
 
 <section>
+  <h2>시험 0 — 기록용 권한만으로 동의받기 (비교용)</h2>
+  <p>지금 앱과 같은 권한만 요청합니다. <b>여기서도 경고 화면이 뜨는지</b> 봐 주세요.</p>
+  <button id="b0" disabled>시험 0 시작</button>
+  <div class="결과" id="r0"></div>
+</section>
+
+<section>
   <h2>시험 1 — 이메일 권한을 더해 동의받기</h2>
   <p>누르면 구글 동의 창이 뜹니다. <b>「Google에서 확인하지 않은 앱」 경고 화면이 뜨는지</b> 봐 주세요.</p>
   <button id="b1" disabled>시험 1 시작</button>
@@ -71,7 +78,17 @@
   }
 
   function 준비() {
-    ['b1','b2','b3'].forEach(b => $(b).disabled = false);
+    ['b0','b1','b2','b3'].forEach(b => $(b).disabled = false);
+
+    $('b0').onclick = async () => {
+      $('r0').innerHTML = '';
+      try {
+        const { r, 초 } = await 받기(기록범위, false, false);
+        표시('r0', '받은 범위: ' + r.scope);
+        표시('r0', '걸린 시간: ' + 초.toFixed(1) + '초');
+        표시('r0', '<b>경고 화면이 떴는지 알려 주세요.</b>');
+      } catch (e) { 표시('r0', 판정(false, '실패: ' + e.message)); }
+    };
 
     $('b1').onclick = async () => {
       $('r1').innerHTML = '';
