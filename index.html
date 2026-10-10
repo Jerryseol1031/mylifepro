@@ -406,6 +406,11 @@
     else if (답.결과 !== '모름') 막기(답);
   }
 
+  // 휴대폰 크롬은 열어 둔 탭을 새로 불러오지 않고 그대로 보여 준다. 며칠 뒤 돌아와도 대조가 돌도록 화면이 다시 보일 때도 묻는다
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && 시트ID && !막힘 && !오늘승인됨()) 뒤에서대조();
+  });
+
   function 막기(답) {
     막힘 = 답; 알림('');
     설정단추.style.display = 'none';
