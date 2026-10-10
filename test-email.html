@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>프로 노트 — 사용 승인 시험</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #fafafa; color: #222; line-height: 1.5; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .안내 { font-size: 14px; color: #666; margin: 0 0 16px; }
+  section { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  h2 { font-size: 16px; margin: 0 0 6px; }
+  p { margin: 0 0 10px; font-size: 14px; }
+  button { font-size: 16px; padding: 10px 14px; border-radius: 8px; border: 1px solid #888; background: #f2f2f2; width: 100%; }
+  .결과 { margin-top: 10px; font-size: 14px; white-space: pre-wrap; word-break: break-all; }
+  .ok { color: #137333; font-weight: 600; }
+  .no { color: #c5221f; font-weight: 600; }
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer onload="준비()"></script>
+</head>
+<body>
+<h1>사용 승인 시험</h1>
+<p class="안내">[4-4] 사용 승인 착수 전 시험용 임시 페이지입니다. 기록 시트는 건드리지 않습니다. 시험이 끝나면 지웁니다.</p>
+
+<section>
+  <h2>시험 1 — 이메일 권한을 더해 동의받기</h2>
+  <p>누르면 구글 동의 창이 뜹니다. <b>「Google에서 확인하지 않은 앱」 경고 화면이 뜨는지</b> 봐 주세요.</p>
+  <button id="b1" disabled>시험 1 시작</button>
+  <div class="결과" id="r1"></div>
+</section>
+
+<section>
+  <h2>시험 2 — 이메일만 든 출입증 따로 받기</h2>
+  <p>시험 1 뒤에 누르세요. 창이 잠깐 떴다 닫힐 수 있습니다.</p>
+  <button id="b2" disabled>시험 2 시작</button>
+  <div class="결과" id="r2"></div>
+</section>
+
+<section>
+  <h2>시험 3 — 하루 첫 실행 흉내</h2>
+  <p>기록용·이메일용 출입증을 차례로 조용히 받습니다. <b>로그인 창이 몇 번 떴다 사라지는지</b> 세어 주세요.</p>
+  <button id="b3" disabled>시험 3 시작</button>
+  <div class="결과" id="r3"></div>
+</section>
+
+<script>
+  const CLIENT_ID = '297972351948-2fq40d61rpp8dngqmg36mn5kqhnp2ebq.apps.googleusercontent.com';
+  const 기록범위 = 'https://www.googleapis.com/auth/drive.file';
+  const 이메일범위 = 'email';
+  const $ = id => document.getElementById(id);
+  const 표시 = (id, html) => { $(id).innerHTML += html + '\n'; };
+  const 판정 = (참, 글) => '<span class="' + (참 ? 'ok' : 'no') + '">' + (참 ? '✅ ' : '❌ ') + 글 + '</span>';
+
+  // 출입증 하나 받기. 범위·조용히·이미 받은 범위 포함 여부를 정할 수 있다
+  function 받기(범위, 조용히, 합치기) {
+    return new Promise((성공, 실패) => {
+      const 시작 = Date.now();
+      const c = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID, scope: 범위, include_granted_scopes: 합치기,
+        callback: r => r.error ? 실패(new Error(r.error)) : 성공({ r, 초: (Date.now() - 시작) / 1000 }),
+        error_callback: e => 실패(new Error((e && e.type) || '로그인 실패'))
+      });
+      c.requestAccessToken(조용히 ? { prompt: '' } : { prompt: 'consent' });
+    });
+  }
+
+  // 구글에 출입증 정보를 묻는다 (접수 창구가 할 일을 여기서 흉내 낸다)
+  async function 출입증정보(t) {
+    const r = await fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(t));
+    return r.json();
+  }
+
+  function 준비() {
+    ['b1','b2','b3'].forEach(b => $(b).disabled = false);
+
+    $('b1').onclick = async () => {
+      $('r1').innerHTML = '';
+      try {
+        const { r, 초 } = await 받기(기록범위 + ' ' + 이메일범위, false, true);
+        표시('r1', '받은 범위: ' + r.scope);
+        표시('r1', 판정(/drive\.file/.test(r.scope), '기록용(drive.file) 받음'));
+        표시('r1', 판정(/userinfo\.email/.test(r.scope), '이메일 권한 받음'));
+        표시('r1', '걸린 시간: ' + 초.toFixed(1) + '초');
+        표시('r1', '<b>경고 화면이 떴는지는 직접 알려 주세요.</b>');
+      } catch (e) { 표시('r1', 판정(false, '실패: ' + e.message)); }
+    };
+
+    $('b2').onclick = async () => {
+      $('r2').innerHTML = '';
+      try {
+        const { r, 초 } = await 받기(이메일범위, true, false);
+        표시('r2', '받은 범위: ' + r.scope);
+        표시('r2', 판정(!/drive/.test(r.scope), '이 출입증에 드라이브 권한이 없음'));
+        표시('r2', '걸린 시간: ' + 초.toFixed(1) + '초');
+        try {
+          const 정보 = await 출입증정보(r.access_token);
+          표시('r2', 판정(!!정보.email, '구글이 알려 준 이메일: ' + (정보.email || '없음')));
+          표시('r2', 판정(정보.aud === CLIENT_ID || 정보.azp === CLIENT_ID, '우리 앱(프로 노트)이 받은 출입증'));
+          표시('r2', 판정(!/drive/.test(정보.scope || ''), '구글 기록상으로도 드라이브 권한 없음'));
+        } catch (e) { 표시('r2', '구글에 묻기 실패(브라우저에서 막혔을 수 있음 — 창구에서는 됨): ' + e.message); }
+        const 드라 = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', { headers: { Authorization: 'Bearer ' + r.access_token } });
+        표시('r2', 판정(!드라.ok, '이 출입증으로 드라이브를 열 수 없음 (응답 ' + 드라.status + ')'));
+      } catch (e) { 표시('r2', 판정(false, '실패: ' + e.message)); }
+    };
+
+    $('b3').onclick = async () => {
+      $('r3').innerHTML = '';
+      try {
+        const a = await 받기(기록범위, true, true);
+        표시('r3', '기록용 출입증: ' + a.초.toFixed(1) + '초');
+        const b = await 받기(이메일범위, true, false);
+        표시('r3', '이메일용 출입증: ' + b.초.toFixed(1) + '초');
+        표시('r3', '합계: ' + (a.초 + b.초).toFixed(1) + '초');
+        표시('r3', '<b>창이 몇 번 떴다 사라졌는지 알려 주세요.</b>');
+      } catch (e) { 표시('r3', 판정(false, '실패: ' + e.message)); }
+    };
+  }
+</script>
+</body>
+</html>
