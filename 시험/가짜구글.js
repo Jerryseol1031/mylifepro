@@ -6,8 +6,8 @@
 //   __느림 = 700    요청마다 기다리는 시간(ms). 휴대폰 통신을 흉내 낸다 (검수 10번)
 //   __실패 = true   쓰기 요청을 전부 실패시킨다
 //   __요청수        지금까지 보낸 요청 수 (연타 합치기 확인용)
-//   __승인 = '중단'  접수 창구의 답 — '승인'(기본) · '중단' · '없음' · '오류'(창구 고장 흉내)
-//   __신분증 = '막힘'  이메일 출입증을 조용히 못 받는 경우 흉내('확인필요' 화면)
+//   __승인 = '중단'  접수 창구의 답 — '승인'(기본) · '대기' · '중단' · '없음' · '오류'(창구 고장 흉내)
+//   __신분증 = '막힘'  이메일 출입증을 조용히 못 받는 경우 흉내('확인필요' 화면). '먹통' = 답이 아예 안 옴(휴대폰)
 //   __창구에간것     창구로 보낸 본문들 — 기록용 출입증(FAKE)이 섞이지 않는지 본다
 //   새 사람 시험: 주소 끝에 ?새사람 — 기록 시트가 없는 사람으로 시작한다 (?새사람&승인=없음 처럼 함께 쓴다)
 (function () {
@@ -54,8 +54,9 @@
     if (window.__실패 && opt && opt.method === 'POST') return 응답({ error: '가짜 실패' }, 500);
     if (url.startsWith('https://script.google.com/')) {
       window.__창구에간것.push(opt.body);
-      const 받은 = JSON.parse(opt.body).출입증;
-      if (window.__승인 === '오류' || 받은 !== 'FAKE_EMAIL') return 응답({ 결과: '오류', 까닭: '가짜 창구 오류' });
+      const 받은 = JSON.parse(opt.body);
+      if (window.__승인 === '오류' || 받은.출입증 !== 'FAKE_EMAIL') return 응답({ 결과: '오류', 까닭: '가짜 창구 오류' });
+      if (받은.요청) { const 처음 = window.__승인 === '없음'; window.__승인 = '대기'; return 응답({ 결과: 처음 ? '요청됨' : '이미', 이메일: 'tester@example.com' }); }
       return 응답({ 결과: window.__승인, 이메일: 'tester@example.com' });
     }
     if (url.includes('/drive/v3/about')) return 응답({ user: { emailAddress: 'tester@example.com' } });
@@ -90,6 +91,7 @@
       setTimeout(() => {
         if (cfg.scope !== 'email') cfg.callback({ access_token: 'FAKE', expires_in: 3600 });
         else if (window.__신분증 === '막힘' && o && o.prompt === '') cfg.error_callback({ type: 'popup_failed_to_open' });
+        else if (window.__신분증 === '먹통' && o && o.prompt === '') return;   // 답이 안 온다
         else cfg.callback({ access_token: 'FAKE_EMAIL' });
       }, window.__느림);
     } }),
