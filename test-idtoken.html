@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>신원 증명서 시험</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 16px; line-height: 1.5; background: #fff; color: #222; }
+  h1 { font-size: 18px; }
+  #판정 { font-size: 20px; font-weight: 700; padding: 12px; border-radius: 8px; background: #eee; }
+  #판정.됨 { background: #d8f0dc; } #판정.안됨 { background: #f7dcdc; }
+  pre { white-space: pre-wrap; font-size: 13px; background: #f5f5f5; padding: 10px; border-radius: 6px; }
+  button { font-size: 15px; padding: 8px 14px; margin: 6px 6px 0 0; }
+</style>
+</head>
+<body>
+<h1>신원 증명서(ID 토큰) 시험 — 프로 노트</h1>
+<p>이 페이지는 단추를 누르지 않고 구글 신원 증명서가 오는지만 봅니다. 받은 것은 이 화면에만 보이고 어디에도 보내지 않습니다(구글에 진짜인지 묻는 것 하나만).</p>
+<div id="판정">기다리는 중…</div>
+<div id="단추자리"></div>
+<button onclick="location.reload()">새로 불러와 다시 시험</button>
+<pre id="기록"></pre>
+
+<script>
+  const CLIENT_ID = '297972351948-2fq40d61rpp8dngqmg36mn5kqhnp2ebq.apps.googleusercontent.com';
+  const 시작 = Date.now();
+  const 기록칸 = document.getElementById('기록'), 판정칸 = document.getElementById('판정');
+  const 초 = () => ((Date.now() - 시작) / 1000).toFixed(1) + '초';
+  const 적기 = t => { 기록칸.textContent += '[' + 초() + '] ' + t + '\n'; };
+  const 판정 = (t, c) => { 판정칸.textContent = t; 판정칸.className = c || ''; };
+  let 사용자가눌렀나 = false;
+
+  try {
+    const 지난 = localStorage.getItem('idtoken_시험_마지막성공');
+    if (지난) 적기('지난번 성공: ' + new Date(Number(지난)).toLocaleString() + ' (' + Math.round((Date.now() - Number(지난)) / 60000) + '분 전)');
+    else 적기('이 브라우저에서 이전 성공 기록 없음 (처음이면 계정 고르기 화면이 한 번 뜰 수 있습니다)');
+  } catch (e) {}
+  적기('브라우저: ' + navigator.userAgent);
+  적기('FedCM(브라우저 기본 로그인 창) 지원: ' + ('IdentityCredential' in window ? '예' : '아니오'));
+
+  function 풀기(jwt) {
+    const b = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(decodeURIComponent(escape(atob(b))));
+  }
+
+  async function 받음(resp) {
+    const 방법 = resp.select_by || '알 수 없음';
+    적기('신원 증명서 받음. 받은 방법(select_by): ' + 방법);
+    const p = 풀기(resp.credential);
+    적기('이메일: ' + p.email + ' · 확인됨: ' + p.email_verified);
+    적기('우리 앱 것인가(aud 일치): ' + (p.aud === CLIENT_ID ? '예' : '아니오'));
+    // 창구가 할 확인을 미리 해 본다 — 구글에 진짜인지 묻는다
+    try {
+      const r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(resp.credential));
+      const 정보 = await r.json();
+      적기('구글 확인(tokeninfo): ' + r.status + ' · aud 일치 ' + (정보.aud === CLIENT_ID ? '예' : '아니오') + ' · 이메일 ' + 정보.email);
+    } catch (e) { 적기('구글 확인 실패: ' + e.message); }
+    const 조용히 = /^(auto|fedcm_auto)$/.test(방법);
+    if (조용히 && !사용자가눌렀나) 판정('✅ 창 없이 받았습니다 (' + 초() + ')', '됨');
+    else 판정('△ 받았지만 한 번 눌러야 했습니다 (' + 방법 + ') — 10분 뒤 새로 열어 한 번 더', '');
+    try { localStorage.setItem('idtoken_시험_마지막성공', String(Date.now())); } catch (e) {}
+  }
+
+  function 시작하기() {
+    적기('구글 스크립트 불러옴');
+    google.accounts.id.initialize({
+      client_id: CLIENT_ID,
+      callback: 받음,
+      auto_select: true,            // 전에 고른 계정이 하나면 묻지 않고 바로
+      use_fedcm_for_prompt: true,   // 크롬의 새 로그인 방식
+      itp_support: true,
+      cancel_on_tap_outside: false
+    });
+    google.accounts.id.prompt(n => {
+      try {
+        if (n.isNotDisplayed && n.isNotDisplayed()) 적기('안 뜸: ' + n.getNotDisplayedReason());
+        if (n.isSkippedMoment && n.isSkippedMoment()) { 적기('건너뜀: ' + n.getSkippedReason()); 판정('❌ 창 없이 못 받았습니다 (건너뜀)', '안됨'); }
+        if (n.isDismissedMoment && n.isDismissedMoment()) 적기('닫힘: ' + n.getDismissedReason());
+      } catch (e) { 적기('알림: ' + JSON.stringify(n)); }
+    });
+    google.accounts.id.renderButton(document.getElementById('단추자리'), { type: 'standard', text: 'signin_with' });
+    document.getElementById('단추자리').addEventListener('click', () => { 사용자가눌렀나 = true; }, true);
+    setTimeout(() => { if (판정칸.textContent === '기다리는 중…') 판정('⏳ 15초 넘게 답이 없습니다 — 화면에 무엇이 떴는지 알려 주세요', '안됨'); }, 15000);
+  }
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="시작하기()"></script>
+</body>
+</html>
