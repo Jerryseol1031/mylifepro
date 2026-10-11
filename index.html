@@ -43,6 +43,12 @@
   .고정제목 { margin-top:2px; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
   .참고메모 { color:var(--muted); padding-left:14px; }
   /* 항목 고치기 — 제목 · 상세 · 평가메모를 이름표와 모양으로 나눈다 */
+  .구역이름 { font-size:12px; font-weight:700; color:var(--accent); margin:2px 0 4px; }
+  .구역이름.평가구역 { margin-top:14px; padding-top:10px; border-top:1px dashed var(--line); }
+  .고치기평가 { gap:6px; }
+  .고치기평가 button { flex:1; width:auto; height:34px; padding:0 6px; white-space:nowrap; font-size:13px; }
+  .고치기단추줄 { margin-top:14px; padding-top:10px; border-top:1px solid var(--line); }
+  .고치기단추줄 .오른쪽 { margin-left:auto; }
   .칸이름 { font-size:11px; font-weight:700; color:var(--muted); margin:8px 0 3px; }
   .칸이름:first-child { margin-top:0; }
   .제목칸 { font-weight:600; }
@@ -1440,7 +1446,7 @@
     // 상세 — 분기·연간만 쓰는 칸을 연다. 일간·주간은 시트에서 손으로 넣은 상세가 있으면 그대로 지킨다 (8k.13)
     const 상세칸 = 분기형(보기) ? 요소('textarea') : null;
     if (상세칸) {
-      상세칸.value = 상세만(h.계획); 상세칸.placeholder = '세부 계획·방법을 자유롭게 (선택)';
+      상세칸.value = 상세만(h.계획); 상세칸.placeholder = '세부 계획·방법을 자유롭게';
       상세칸.classList.add('상세칸');
       const 높이 = () => { 상세칸.style.height = 'auto'; 상세칸.style.height = Math.max(56, 상세칸.scrollHeight + 2) + 'px'; };
       상세칸.addEventListener('input', 높이); setTimeout(높이, 0);
@@ -1453,9 +1459,24 @@
     // 여러 줄로 길게 쓸 수 있다 — 다른 화면에서는 첫 줄만 보인다 (8k.12)
     const 메모칸 = 분기형(보기) ? 요소('textarea') : null;
     if (메모칸) {
-      메모칸.value = h.평가메모 || ''; 메모칸.placeholder = '이 항목을 돌아보며 (선택). 길게 써도 다른 화면엔 첫 줄만';
+      메모칸.value = h.평가메모 || ''; 메모칸.placeholder = '이 항목을 돌아보며. 길게 써도 다른 화면엔 첫 줄만';
       const 높이 = () => { 메모칸.style.height = 'auto'; 메모칸.style.height = Math.max(56, 메모칸.scrollHeight + 2) + 'px'; };
       메모칸.addEventListener('input', 높이); setTimeout(높이, 0);
+    }
+    // 평가 구역의 ○△✕ — 분기·연간 고치기 칸에서도 고른다. 저장 단추를 누를 때 함께 쓴다 (사용자, 2026-10-11)
+    let 고른평가 = h.평가;
+    const 평가줄 = 메모칸 ? 요소('div','평가들 고치기평가') : null;
+    if (평가줄) {
+      const 그리평가 = () => {
+        평가줄.innerHTML = '';
+        평가모양.forEach(([값, 기호글]) => {
+          const b = 요소('button', 고른평가 === 값 ? '골라짐' : null, 기호글 + ' ' + 값);
+          b.setAttribute('aria-label', 값);
+          b.addEventListener('click', () => { 고른평가 = 고른평가 === 값 ? '' : 값; 그리평가(); });
+          평가줄.appendChild(b);
+        });
+      };
+      그리평가();
     }
     // 글·주제·메모를 함께 쓴다 — 연달아 고쳐 앞의 쓰기가 버려져도 마지막 쓰기에 다 들어 있다 (8h.9)
     const 항목쓰기 = (z) => {
@@ -1465,10 +1486,10 @@
       const 옛글 = h.계획;
       h.계획 = 글;
       if (z !== undefined) { h.주제ID = z ? z.id : ''; h.주제사본 = z ? z.이름 : ''; }
-      if (메모칸) h.평가메모 = 메모칸.value.trim();
+      if (메모칸) { h.평가메모 = 메모칸.value.trim(); h.평가 = 고른평가; }
       화면그리기();
       const 값 = { '계획':글, '주제ID':h.주제ID, '주제':h.주제사본, '수정시각':지금() };
-      if (메모칸) 값['평가메모'] = h.평가메모;
+      if (메모칸) { 값['평가메모'] = h.평가메모; 값['평가'] = h.평가; }
       저장하기(() => 고치기('계획항목', [{ 찾기:(행, v) => v(행,'항목ID') === h.id, 바꿀것:값 }]),
         () => 글 !== 옛글 ? '고치려던 글: ' + 글 + ' (원래: ' + 옛글 + ')' : null, '항목:' + h.id);
     };
@@ -1484,14 +1505,25 @@
     });
     취소.addEventListener('click', () => li.replaceWith(원래));
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 저장.click(); });
-    // 쓸 때도 눈으로 나뉘게 — 칸마다 이름표를 단다 (사용자, 2026-10-11)
-    if (상세칸) li.appendChild(요소('div','칸이름','제목'));
+    // 분기·연간: 「계획」(제목·상세·주제)과 「평가」(○△✕·평가메모) 두 구역, 단추는 맨 아래 한 줄 — 모든 칸에 대한 것이라 (사용자, 2026-10-11)
+    // 일간·주간: 제목 한 칸 + 주제, 평가는 항목 줄의 ○△✕ 그대로
+    if (상세칸) {
+      li.appendChild(요소('div','구역이름','계획'));
+      li.appendChild(요소('div','칸이름','제목'));
+    }
     li.appendChild(inp);
-    if (상세칸) { li.appendChild(요소('div','칸이름','상세')); li.appendChild(상세칸); }
-    if (메모칸) { li.appendChild(요소('div','칸이름','평가메모')); li.appendChild(메모칸); }   // 여러 줄이라 엔터는 줄바꿈 — 저장은 단추로
-    줄.append(저장, 지우기, 취소);
-    li.appendChild(줄);
+    if (상세칸) { li.appendChild(요소('div','칸이름','상세 (선택)')); li.appendChild(상세칸); }
     li.appendChild(주제고르개(h, 영역, 항목쓰기));
+    if (메모칸) {   // 여러 줄이라 엔터는 줄바꿈 — 저장은 단추로
+      li.appendChild(요소('div','구역이름 평가구역','평가'));
+      li.appendChild(평가줄);
+      li.appendChild(요소('div','칸이름','평가메모 (선택)'));
+      li.appendChild(메모칸);
+    }
+    줄.classList.add('고치기단추줄');
+    지우기.classList.add('오른쪽');
+    줄.append(저장, 취소, 지우기);
+    li.appendChild(줄);
     return li;
   }
 
