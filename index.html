@@ -41,7 +41,8 @@
   .참고줄 { line-height:1.55; padding-left:2px; }
   .참고줄 b { display:inline-block; width:14px; font-weight:400; color:var(--muted); }
   .고정제목 { margin-top:2px; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
-  .참고메모 { color:var(--muted); margin-left:8px; }
+  .참고메모 { color:var(--muted); padding-left:14px; }
+  .더보기 { border:0; background:none; color:var(--accent); font-size:11px; font-weight:600; padding:0; white-space:nowrap; }
   .참고 > .고정제목:not(:first-child) { margin-top:10px; }
   .참고주제 { display:flex; align-items:center; gap:5px; margin:6px 0 1px; font-weight:600; color:#3d4a44; }
   .참고줄.묶인줄 { padding-left:14px; }
@@ -960,12 +961,28 @@
   }
   const 기호 = 평가 => (평가모양.find(([값]) => 값 === 평가) || [null, '·'])[1];
 
-  // 접은 참고는 이 기기에서 기억한다. 기본은 펼침 (개발결정로그 8h.5)
-  const 접음키 = 'pronote_참고접음';
-  function 접은것() { try { return new Set(JSON.parse(localStorage.getItem(접음키) || '[]')); } catch (e) { return new Set(); } }
-  function 접음바꾸기(열쇠, 접나) {
-    const s = 접은것(); 접나 ? s.add(열쇠) : s.delete(열쇠);
-    try { localStorage.setItem(접음키, JSON.stringify([...s])); } catch (e) {}
+  // 지난 기간 참고는 계획을 세울 때만 펼친다 — 이번 기간에 그 영역 항목이 하나도 없으면 펼침, 하나라도 있으면 접힘 (8k.11).
+  // 손으로 펴고 접은 것은 그 화면을 보는 동안만 기억한다
+  const 참고손접음 = new Map();   // '단위:기간:영역ID' → 접힘
+
+  // 긴 글은 첫 줄만 보이고 「더 보기」로 펼친다 — 다른 화면에서 길게 보일 걱정 없이 마음껏 쓰게 (사용자, 2026-10-11)
+  function 펼침글(글, cls, 앞글) {
+    const 틀 = 요소('div', cls);
+    const 줄들 = 글.split('\n');
+    const 길다 = 줄들.length > 1 || 글.length > 60;
+    if (!길다) { 틀.textContent = (앞글 || '') + 글; return 틀; }
+    let 펼침 = false;
+    const 본문 = 요소('span');
+    const 단추 = 요소('button','더보기');
+    const 그리기2 = () => {
+      본문.textContent = (앞글 || '') + (펼침 ? 글 : (줄들[0].length > 60 ? 줄들[0].slice(0, 60) : 줄들[0]) + '…');
+      단추.textContent = 펼침 ? ' 접기 ▴' : ' 더 보기 ▸';
+    };
+    단추.addEventListener('click', ev => { ev.stopPropagation(); 펼침 = !펼침; 그리기2(); });
+    그리기2();
+    틀.style.whiteSpace = 'pre-wrap';
+    틀.append(본문, 단추);
+    return 틀;
   }
 
   // 주간 맨 위, 영역 카드들 위에 분기 핵심 목표 — 따로 한 칸, 접힘이 기본 (8k.2 → 사용자 2026-10-11: 실행 초점 안이 아니라 그 위에)
@@ -1024,7 +1041,7 @@
   function 참고항목줄(h, 메모까지) {
     const 줄 = 요소('div','참고줄');
     줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(h.계획));
-    if (메모까지 && h.평가메모) 줄.appendChild(요소('span','참고메모', '메모: ' + h.평가메모));
+    if (메모까지 && h.평가메모) 줄.appendChild(펼침글(h.평가메모, '참고메모', '메모: '));
     return 줄;
   }
   // 참고 목록도 계획 칸처럼 주제로 묶는다 — 주제 없는 항목은 제목 없이 맨 위, 그 아래 주제 순서대로 (사용자, 2026-10-11)
@@ -1052,8 +1069,9 @@
     if (!상위.length && !지난.length && !지난피드백) return null;   // 참고할 것이 없으면 줄째 안 보인다
 
     const 틀 = 요소('div','참고');
-    const 열쇠 = 보기.단위 + ':' + 영역.id;
-    let 접힘 = 접은것().has(열쇠);
+    const 열쇠 = 보기.단위 + ':' + 보기.기간 + ':' + 영역.id;
+    const 계획세우는중 = !자료.항목들.some(h => h.영역ID === 영역.id);
+    let 접힘 = 참고손접음.has(열쇠) ? 참고손접음.get(열쇠) : !계획세우는중;
     const 머리 = 요소('button','참고머리');
     const 몸 = 요소('div');
 
@@ -1061,12 +1079,12 @@
     if (상위.length) 요약.push(보기.상위.짧게 + ' 계획 ' + 상위.length);
     if (지난.length) {
       const 셈 = {}; 지난.forEach(h => { const k = 기호(h.평가); 셈[k] = (셈[k] || 0) + 1; });
-      요약.push(보기.지난.짧게 + ' ' + Object.keys(셈).map(k => k + 셈[k]).join(' '));
+      요약.push(보기.지난.짧게 + ' ' + Object.keys(셈).map(k => k + 셈[k]).join(' ') + (지난피드백 ? ' · 피드백 있음' : ''));
     } else if (지난피드백) 요약.push(보기.지난.짧게 + ' 피드백');
     const 요약칸 = 요소('span', null, 요약.join(' · '));
     const 그리머리 = () => { 머리.firstChild.textContent = '참고 ' + (접힘 ? '▸' : '▾'); 요약칸.style.display = 접힘 ? '' : 'none'; 몸.style.display = 접힘 ? 'none' : ''; };
     머리.append(document.createTextNode(''), 요약칸);
-    머리.addEventListener('click', () => { 접힘 = !접힘; 접음바꾸기(열쇠, 접힘); 그리머리(); });
+    머리.addEventListener('click', () => { 접힘 = !접힘; 참고손접음.set(열쇠, 접힘); 그리머리(); });
 
     const 목록 = (제목, 항목들) => {
       몸.appendChild(요소('div','참고제목', 제목));
@@ -1075,7 +1093,7 @@
     if (상위.length) 목록(보기.상위.이름, 상위);
     if (지난.length || 지난피드백) {
       목록(보기.지난.이름, 지난);
-      if (지난피드백) 몸.appendChild(요소('div','참고줄', '피드백: ' + 지난피드백));
+      if (지난피드백) 몸.appendChild(펼침글(지난피드백, '참고줄', '피드백: '));
     }
     틀.append(머리, 몸);
     그리머리();
@@ -1384,7 +1402,7 @@
     });
     줄.append(글, 평가들);
     li.appendChild(줄);
-    if (분기형(보기) && h.평가메모) li.appendChild(요소('div','평가메모', h.평가메모));   // 항목 아래 작은 글씨 (8k.6)
+    if (분기형(보기) && h.평가메모) li.appendChild(펼침글(h.평가메모, '평가메모'));   // 항목 아래 작은 글씨, 길면 첫 줄만 (8k.6 → 8k.12)
     if (h.이월 >= 3) li.appendChild(요소('div','쪼개기','세 번 미뤘습니다. 더 작고 쉬운 단위로 쪼개보세요.'));
     return li;
   }
@@ -1397,10 +1415,13 @@
     const 지우기 = 요소('button','옅은단추 지우기단추','지우기');
     const 취소 = 요소('button','옅은단추','취소');
     // 평가메모 — 분기·연간만. 고치기 칸에서 쓰고 항목 아래 작은 글씨로 보인다 (8k.6)
-    const 메모칸 = 분기형(보기) ? 요소('input') : null;
+    // 여러 줄로 길게 쓸 수 있다 — 다른 화면에서는 첫 줄만 보인다 (8k.12)
+    const 메모칸 = 분기형(보기) ? 요소('textarea') : null;
     if (메모칸) {
-      메모칸.type = 'text'; 메모칸.maxLength = 200; 메모칸.value = h.평가메모 || ''; 메모칸.placeholder = '평가메모 (선택)';
+      메모칸.value = h.평가메모 || ''; 메모칸.placeholder = '평가메모 (선택) — 이 항목을 돌아보며. 길게 써도 다른 화면엔 첫 줄만';
       메모칸.style.marginTop = '6px';
+      const 높이 = () => { 메모칸.style.height = 'auto'; 메모칸.style.height = Math.max(56, 메모칸.scrollHeight + 2) + 'px'; };
+      메모칸.addEventListener('input', 높이); setTimeout(높이, 0);
     }
     // 글·주제·메모를 함께 쓴다 — 연달아 고쳐 앞의 쓰기가 버려져도 마지막 쓰기에 다 들어 있다 (8h.9)
     const 항목쓰기 = (z) => {
@@ -1428,10 +1449,7 @@
     취소.addEventListener('click', () => li.replaceWith(원래));
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 저장.click(); });
     li.appendChild(inp);
-    if (메모칸) {
-      메모칸.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 저장.click(); });
-      li.appendChild(메모칸);
-    }
+    if (메모칸) li.appendChild(메모칸);   // 여러 줄이라 엔터는 줄바꿈 — 저장은 단추로
     줄.append(저장, 지우기, 취소);
     li.appendChild(줄);
     li.appendChild(주제고르개(h, 영역, 항목쓰기));
@@ -1549,6 +1567,9 @@
     };
     살피기();
     ta.addEventListener('input', 살피기);
+    // 글 길이만큼 칸이 늘어난다 — 길게 써도 스크롤 없이 다 보이게
+    const 높이 = () => { ta.style.height = 'auto'; ta.style.height = Math.max(56, ta.scrollHeight + 2) + 'px'; };
+    ta.addEventListener('input', 높이); setTimeout(높이, 0);
     btn.addEventListener('click', () => {
       const 글 = ta.value.trim();
       const 쓸일 = 저장함수(글);
