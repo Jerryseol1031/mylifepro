@@ -42,6 +42,12 @@
   .참고줄 b { display:inline-block; width:14px; font-weight:400; color:var(--muted); }
   .고정제목 { margin-top:2px; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
   .참고메모 { color:var(--muted); padding-left:14px; }
+  /* 항목 고치기 — 제목 · 상세 · 평가메모를 이름표와 모양으로 나눈다 */
+  .칸이름 { font-size:11px; font-weight:700; color:var(--muted); margin:8px 0 3px; }
+  .칸이름:first-child { margin-top:0; }
+  .제목칸 { font-weight:600; }
+  .상세칸 { background:var(--soft) !important; border-style:dashed !important; font-size:13px !important; }
+  .상세글 { font-size:12px; color:#3d4a44; white-space:pre-wrap; line-height:1.5; margin:4px 0 0; padding:6px 8px; background:var(--soft); border-radius:6px; }
   .더보기 { border:0; background:none; color:var(--accent); font-size:11px; font-weight:600; padding:0; white-space:nowrap; }
   .참고 > .고정제목:not(:first-child) { margin-top:10px; }
   .참고주제 { display:flex; align-items:center; gap:5px; margin:6px 0 1px; font-weight:600; color:#3d4a44; }
@@ -1040,7 +1046,8 @@
   // 참고의 항목 한 줄 — 평가 기호 · 계획. 메모까지면 평가메모를 뒤에 붙인다 (분기·연간 — 8k.6)
   function 참고항목줄(h, 메모까지) {
     const 줄 = 요소('div','참고줄');
-    줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(h.계획));
+    줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(제목만(h.계획)));
+    상세펼침(h, 줄, 줄);
     if (메모까지 && h.평가메모) 줄.appendChild(펼침글(h.평가메모, '참고메모', '메모: '));
     return 줄;
   }
@@ -1372,10 +1379,28 @@
     return 틀;
   }
 
+  // 항목 상세 — 시트에는 새 칸 없이 「계획」 칸의 첫 줄이 제목, 둘째 줄부터가 상세다 (8k.13).
+  // 다른 화면에는 제목만 보이고 「▸ 상세」를 누르면 펼쳐진다
+  const 제목만 = 계획 => 계획.split('\n')[0];
+  const 상세만 = 계획 => 계획.split('\n').slice(1).join('\n').trim();
+  function 상세펼침(h, 틀, 붙일곳) {
+    const 상세 = 상세만(h.계획);
+    if (!상세) return;
+    const 단추 = 요소('button','더보기 상세단추', ' ▸ 상세');
+    const 몸 = 요소('div','상세글', 상세); 몸.style.display = 'none';
+    단추.addEventListener('click', ev => {
+      ev.stopPropagation();
+      const 열림 = 몸.style.display === 'none';
+      몸.style.display = 열림 ? '' : 'none'; 단추.textContent = 열림 ? ' ▾ 상세' : ' ▸ 상세';
+    });
+    붙일곳.appendChild(단추);
+    틀.appendChild(몸);
+  }
+
   function 항목줄(h, 영역, 옮김) {
     const li = 요소('li');
     const 줄 = 요소('div','항목줄');
-    const 글 = 요소('div','항목글', h.계획);
+    const 글 = 요소('div','항목글', 제목만(h.계획));
     if (h.이월) 글.appendChild(요소('span','꼬리표', '이월 ' + h.이월));
     if (옮김) {   // 순서 바꾸는 중 — 평가 단추 자리에 ▲▼. 잘못 눌러 평가가 바뀌지 않게 평가는 숨긴다
       const 단추들 = 요소('div','평가들');
@@ -1402,6 +1427,7 @@
     });
     줄.append(글, 평가들);
     li.appendChild(줄);
+    상세펼침(h, li, 글);
     if (분기형(보기) && h.평가메모) li.appendChild(펼침글(h.평가메모, '평가메모'));   // 항목 아래 작은 글씨, 길면 첫 줄만 (8k.6 → 8k.12)
     if (h.이월 >= 3) li.appendChild(요소('div','쪼개기','세 번 미뤘습니다. 더 작고 쉬운 단위로 쪼개보세요.'));
     return li;
@@ -1409,7 +1435,16 @@
 
   function 항목고치기줄(h, 원래, 영역) {
     const li = 요소('li');
-    const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200; inp.value = h.계획;
+    const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200; inp.value = 제목만(h.계획);
+    inp.classList.add('제목칸');
+    // 상세 — 분기·연간만 쓰는 칸을 연다. 일간·주간은 시트에서 손으로 넣은 상세가 있으면 그대로 지킨다 (8k.13)
+    const 상세칸 = 분기형(보기) ? 요소('textarea') : null;
+    if (상세칸) {
+      상세칸.value = 상세만(h.계획); 상세칸.placeholder = '세부 계획·방법을 자유롭게 (선택)';
+      상세칸.classList.add('상세칸');
+      const 높이 = () => { 상세칸.style.height = 'auto'; 상세칸.style.height = Math.max(56, 상세칸.scrollHeight + 2) + 'px'; };
+      상세칸.addEventListener('input', 높이); setTimeout(높이, 0);
+    }
     const 줄 = 요소('div','입력줄');
     const 저장 = 요소('button','작은단추','저장');
     const 지우기 = 요소('button','옅은단추 지우기단추','지우기');
@@ -1418,14 +1453,15 @@
     // 여러 줄로 길게 쓸 수 있다 — 다른 화면에서는 첫 줄만 보인다 (8k.12)
     const 메모칸 = 분기형(보기) ? 요소('textarea') : null;
     if (메모칸) {
-      메모칸.value = h.평가메모 || ''; 메모칸.placeholder = '평가메모 (선택) — 이 항목을 돌아보며. 길게 써도 다른 화면엔 첫 줄만';
-      메모칸.style.marginTop = '6px';
+      메모칸.value = h.평가메모 || ''; 메모칸.placeholder = '이 항목을 돌아보며 (선택). 길게 써도 다른 화면엔 첫 줄만';
       const 높이 = () => { 메모칸.style.height = 'auto'; 메모칸.style.height = Math.max(56, 메모칸.scrollHeight + 2) + 'px'; };
       메모칸.addEventListener('input', 높이); setTimeout(높이, 0);
     }
     // 글·주제·메모를 함께 쓴다 — 연달아 고쳐 앞의 쓰기가 버려져도 마지막 쓰기에 다 들어 있다 (8h.9)
     const 항목쓰기 = (z) => {
-      const 글 = inp.value.trim() || h.계획;
+      const 제목 = inp.value.trim().replace(/\n/g, ' ') || 제목만(h.계획);
+      const 상세 = 상세칸 ? 상세칸.value.trim() : 상세만(h.계획);
+      const 글 = 상세 ? 제목 + '\n' + 상세 : 제목;
       const 옛글 = h.계획;
       h.계획 = 글;
       if (z !== undefined) { h.주제ID = z ? z.id : ''; h.주제사본 = z ? z.이름 : ''; }
@@ -1448,8 +1484,11 @@
     });
     취소.addEventListener('click', () => li.replaceWith(원래));
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 저장.click(); });
+    // 쓸 때도 눈으로 나뉘게 — 칸마다 이름표를 단다 (사용자, 2026-10-11)
+    if (상세칸) li.appendChild(요소('div','칸이름','제목'));
     li.appendChild(inp);
-    if (메모칸) li.appendChild(메모칸);   // 여러 줄이라 엔터는 줄바꿈 — 저장은 단추로
+    if (상세칸) { li.appendChild(요소('div','칸이름','상세')); li.appendChild(상세칸); }
+    if (메모칸) { li.appendChild(요소('div','칸이름','평가메모')); li.appendChild(메모칸); }   // 여러 줄이라 엔터는 줄바꿈 — 저장은 단추로
     줄.append(저장, 지우기, 취소);
     li.appendChild(줄);
     li.appendChild(주제고르개(h, 영역, 항목쓰기));
