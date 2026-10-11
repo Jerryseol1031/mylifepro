@@ -18,10 +18,11 @@
   button:disabled { opacity:.5; cursor:default; }
   .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px; }
 
-  .단위들 { display:flex; background:var(--bg); border-radius:9px; padding:3px; margin-bottom:10px; }
-  .단위들 button { flex:1; border:0; background:none; padding:6px 0; border-radius:7px; font-size:13px; color:var(--muted); }
+  .단위들 { display:flex; gap:4px; background:var(--bg); border-radius:9px; padding:3px; margin-bottom:10px; }
+  /* 골라지지 않은 단추도 테두리로 자기 자리가 보이게 (사용자, 2026-10-11) */
+  .단위들 button { flex:1; border:1px solid var(--line); background:none; padding:6px 0; border-radius:7px; font-size:13px; color:var(--muted); }
   .단위들 button.가끔 { flex:0 0 56px; font-size:12px; color:#9a9a9a; }
-  .단위들 button.골라짐 { background:#fff; color:var(--fg); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .단위들 button.골라짐 { border-color:#fff; background:#fff; color:var(--fg); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.08); }
   .날짜줄 { display:flex; align-items:center; gap:8px; }
   .날짜줄 .넘김 { width:34px; height:34px; flex:none; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:13px; color:var(--fg); }
   .날짜 { flex:1; text-align:center; font-size:15px; font-weight:600; }
