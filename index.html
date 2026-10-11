@@ -1127,7 +1127,7 @@
 
     // 계획 제목 옆 「순서」 — 누르면 평가 단추 자리에 ▲▼가 나와 항목·주제 순서를 바꾼다
     const 순서중 = 순서모드.has(영역.id);
-    const 제목줄 = 요소('div','칸제목', '계획');
+    const 제목줄 = 요소('div','칸제목', '계획·평가');   // 항목마다 계획과 평가가 함께 있다 (사용자, 2026-10-11)
     if (항목들.length > 1 || (순서중)) {
       const 순서단추 = 요소('button','순서단추', 순서중 ? '완료' : '순서 변경');
       순서단추.addEventListener('click', () => { 순서중 ? 순서모드.delete(영역.id) : 순서모드.add(영역.id); 화면그리기(); });
@@ -1389,6 +1389,15 @@
   // 다른 화면에는 제목만 보이고 「▸ 상세」를 누르면 펼쳐진다
   const 제목만 = 계획 => 계획.split('\n')[0];
   const 상세만 = 계획 => 계획.split('\n').slice(1).join('\n').trim();
+  // 펼친 상세는 하나씩 — 바깥을 누르면 닫힌다 (사용자, 2026-10-11)
+  let 열린상세 = null;   // { 몸, 단추 }
+  function 상세닫기() {
+    if (!열린상세) return;
+    열린상세.몸.style.display = 'none'; 열린상세.단추.textContent = ' ▸ 상세'; 열린상세 = null;
+  }
+  document.addEventListener('click', ev => {
+    if (열린상세 && !열린상세.몸.contains(ev.target) && ev.target !== 열린상세.단추) 상세닫기();
+  });
   function 상세펼침(h, 틀, 붙일곳) {
     const 상세 = 상세만(h.계획);
     if (!상세) return;
@@ -1396,11 +1405,43 @@
     const 몸 = 요소('div','상세글', 상세); 몸.style.display = 'none';
     단추.addEventListener('click', ev => {
       ev.stopPropagation();
-      const 열림 = 몸.style.display === 'none';
-      몸.style.display = 열림 ? '' : 'none'; 단추.textContent = 열림 ? ' ▾ 상세' : ' ▸ 상세';
+      const 열려있었나 = 열린상세 && 열린상세.몸 === 몸;
+      상세닫기();
+      if (열려있었나) return;
+      몸.style.display = ''; 단추.textContent = ' ▾ 상세'; 열린상세 = { 몸, 단추 };
     });
     붙일곳.appendChild(단추);
     틀.appendChild(몸);
+  }
+
+  // 긴 글 칸의 글머리 기호 — 줄 맨 앞에 「- 」를 치면 「• 」로 바뀌고, 기호 줄에서 엔터를 치면 다음 줄에도 기호가 붙는다.
+  // 기호만 있는 줄에서 엔터를 치면 기호를 뗀다 (구글 문서처럼 — 사용자, 2026-10-11). 시트에는 「• 」 글자로 저장된다
+  function 글머리(ta) {
+    ta.addEventListener('input', ev => {
+      if (ev.inputType !== 'insertText' || ev.data !== ' ') return;
+      const p = ta.selectionStart, 앞 = ta.value.slice(0, p);
+      const 줄시작 = 앞.lastIndexOf('\n') + 1;
+      if (앞.slice(줄시작) !== '- ') return;
+      ta.value = ta.value.slice(0, 줄시작) + '• ' + ta.value.slice(p);
+      ta.selectionStart = ta.selectionEnd = 줄시작 + 2;
+      ta.dispatchEvent(new Event('input'));
+    });
+    ta.addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter' || ev.isComposing || ev.shiftKey) return;
+      const p = ta.selectionStart, 앞 = ta.value.slice(0, p);
+      const 줄 = 앞.slice(앞.lastIndexOf('\n') + 1);
+      if (!줄.startsWith('• ')) return;
+      ev.preventDefault();
+      if (줄 === '• ') {   // 빈 기호 줄 — 기호를 떼고 끝낸다
+        const 줄시작 = p - 2;
+        ta.value = ta.value.slice(0, 줄시작) + ta.value.slice(p);
+        ta.selectionStart = ta.selectionEnd = 줄시작;
+      } else {
+        ta.value = 앞 + '\n• ' + ta.value.slice(ta.selectionEnd);
+        ta.selectionStart = ta.selectionEnd = p + 3;
+      }
+      ta.dispatchEvent(new Event('input'));
+    });
   }
 
   function 항목줄(h, 영역, 옮김) {
@@ -1507,18 +1548,18 @@
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 저장.click(); });
     // 분기·연간: 「계획」(제목·상세·주제)과 「평가」(○△✕·평가메모) 두 구역, 단추는 맨 아래 한 줄 — 모든 칸에 대한 것이라 (사용자, 2026-10-11)
     // 일간·주간: 제목 한 칸 + 주제, 평가는 항목 줄의 ○△✕ 그대로
-    if (상세칸) {
-      li.appendChild(요소('div','구역이름','계획'));
-      li.appendChild(요소('div','칸이름','제목'));
-    }
+    // 주제는 계획 구역 맨 위 — 무엇에 관한 항목인지 먼저 보이게 (사용자, 2026-10-11)
+    if (상세칸) li.appendChild(요소('div','구역이름','계획'));
+    const 고르개 = 주제고르개(h, 영역, 항목쓰기); 고르개.style.marginTop = '0'; 고르개.style.marginBottom = '4px';
+    li.appendChild(고르개);
+    if (상세칸) li.appendChild(요소('div','칸이름','제목'));
     li.appendChild(inp);
-    if (상세칸) { li.appendChild(요소('div','칸이름','상세 (선택)')); li.appendChild(상세칸); }
-    li.appendChild(주제고르개(h, 영역, 항목쓰기));
+    if (상세칸) { li.appendChild(요소('div','칸이름','상세 (선택)')); li.appendChild(상세칸); 글머리(상세칸); }
     if (메모칸) {   // 여러 줄이라 엔터는 줄바꿈 — 저장은 단추로
       li.appendChild(요소('div','구역이름 평가구역','평가'));
       li.appendChild(평가줄);
       li.appendChild(요소('div','칸이름','평가메모 (선택)'));
-      li.appendChild(메모칸);
+      li.appendChild(메모칸); 글머리(메모칸);
     }
     줄.classList.add('고치기단추줄');
     지우기.classList.add('오른쪽');
@@ -1627,7 +1668,7 @@
   function 글칸(열쇠, 제목, 쓴글, 안내, 저장함수) {
     const 틀 = 요소('div');
     if (제목) 틀.appendChild(요소('div','칸제목', 제목));
-    const ta = 요소('textarea'); ta.placeholder = 안내;
+    const ta = 요소('textarea'); ta.placeholder = 안내; 글머리(ta);
     ta.value = 안쓴글.has(열쇠) ? 안쓴글.get(열쇠) : 쓴글;
     const 단추줄 = 요소('div','저장줄');
     const btn = 요소('button','작은단추','저장');
