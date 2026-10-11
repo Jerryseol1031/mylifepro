@@ -831,6 +831,7 @@
     화면.appendChild(날짜카드(보기));
     // 분기·연간: 지난 기간 핵심 문제(읽기 전용) → 영역들 → 이번 기간 핵심 문제. 일기는 없다 (8k.3 · 설계 5-9)
     if (분기형(보기) && 자료.지난핵심문제) 화면.appendChild(지난핵심문제카드(자료.지난핵심문제, 보기));
+    if (보기.단위 === '주') { const 목표칸 = 분기핵심목표카드(자료, 보기); if (목표칸) 화면.appendChild(목표칸); }
     자료.영역전체.filter(영역 => 영역.기간[보기.단위]).forEach(영역 => 화면.appendChild(영역카드(영역, 자료, 보기)));
     화면.appendChild(분기형(보기) ? 핵심문제카드(자료.핵심문제, 보기) : 일기카드(자료.일기, 보기));
     if (다시초점) { const 칸 = 화면.querySelector('[data-추가="'+다시초점+'"]'); if (칸) 칸.focus({ preventScroll:true }); 다시초점 = null; }
@@ -928,7 +929,26 @@
     try { localStorage.setItem(접음키, JSON.stringify([...s])); } catch (e) {}
   }
 
+  // 주간 맨 위, 영역 카드들 위에 분기 핵심 목표 — 따로 한 칸, 접힘이 기본 (8k.2 → 사용자 2026-10-11: 실행 초점 안이 아니라 그 위에)
   let 핵심목표펼침 = false;   // 다시 켜면 접힌 채로 시작한다
+  function 분기핵심목표카드(자료, 보기) {
+    const 핵심목표 = 자료.상위항목.filter(h => h.영역ID === 'base_goal');
+    if (!핵심목표.length) return null;   // 분기 핵심 목표가 없으면 칸째 안 띄운다
+    const card = 요소('div','card');
+    const 틀 = 요소('div','참고'); 틀.style.marginTop = '0';
+    const 머리 = 요소('button','참고머리', '분기 핵심 목표 · ' + 보기.상위.기간.slice(-1) + '분기 ' + (핵심목표펼침 ? '▾' : '▸'));
+    머리.appendChild(요소('span', null, ' ' + 핵심목표.length + '개'));
+    머리.addEventListener('click', () => { 핵심목표펼침 = !핵심목표펼침; 화면그리기(); });
+    틀.appendChild(머리);
+    if (핵심목표펼침) {
+      주제별참고(틀, 핵심목표);
+      const 가기 = 요소('button','글자단추','분기 화면 ›'); 가기.style.cssText = 'display:block;margin-left:auto;padding:6px 0 0;';
+      가기.addEventListener('click', 보기.상위.가기);
+      틀.appendChild(가기);
+    }
+    card.appendChild(틀);
+    return card;
+  }
   // 상위 기간 계획은 늘 보인다 — 접지 않고, 비어 있으면 「○○ 계획 없음 — ○○에서 세우기 ›」 (8i.5 → 8k.1).
   // 상위 기간에 안 나오는 영역에는 안 띄운다. 지난 기간 기록은 아래 「참고」에서 접을 수 있다
   function 참고블록(영역, 자료, 보기) {
@@ -937,15 +957,6 @@
     if (위.고정 && 영역.기간[위.단위]) {
       const 묶음 = 요소('div');
       const 고정 = 요소('div','참고');
-      // 주간 실행 초점 맨 위에 분기 핵심 목표 — 접힘이 기본. 분기 핵심 목표 → 분기 실행 초점 → 주간 실행 초점의 사슬 (8k.2)
-      const 핵심목표 = 보기.단위 === '주' && 영역.id === 'base_action' ? 자료.상위항목.filter(h => h.영역ID === 'base_goal') : [];
-      if (핵심목표.length) {
-        const 펼침 = 핵심목표펼침;
-        const 머리 = 요소('button','참고머리', '분기 핵심 목표 ' + (펼침 ? '▾' : '▸'));
-        머리.appendChild(요소('span', null, ' ' + 핵심목표.length + '개'));        머리.addEventListener('click', () => { 핵심목표펼침 = !핵심목표펼침; 화면그리기(); });
-        고정.appendChild(머리);
-        if (펼침) 주제별참고(고정, 핵심목표);
-      }
       const 제목 = 요소('div','참고제목 고정제목', 위.고정);
       고정.appendChild(제목);
       const 가기단추 = 글 => {
