@@ -1,9 +1,10 @@
 // 프로 노트 접수 창구 — 운영 시트 「프로 노트 운영」에 붙는 앱스 스크립트
-// 하는 일: 앱이 보낸 「이메일만 든 출입증」을 구글에 확인하고, 승인 명단에서 그 이메일의 상태를 본다.
+// 하는 일: 앱이 보낸 「신원 증명서」(ID 토큰)나 「이메일만 든 출입증」을 구글에 확인하고, 승인 명단에서 그 이메일의 상태를 본다.
 //          명단에 있으면 마지막 접속일(날짜만)을 적고, 「활동」이면 승인한다.
 //          명단에 없는 사람이 「승인 요청 보내기」를 누르면 「대기」로 한 줄 넣고 관리자에게 메일을 보낸다.
 //          그 밖에는 아무것도 적지 않는다.
 // 기록 시트를 열 수 있는 출입증은 받지 않는다 — 이메일만 든 출입증이 아니면 거절한다.
+// 신원 증명서에는 이름·프로필 사진 주소도 들어 있지만 읽지도 적지도 않는다 — 이메일만 꺼내 쓴다.
 // 이 파일은 공개용 사본이다. 실제로 도는 것은 관리자의 운영 시트에 붙인 같은 코드다 — 고치면 둘을 함께 고친다.
 
 const 앱_클라이언트ID = '297972351948-2fq40d61rpp8dngqmg36mn5kqhnp2ebq.apps.googleusercontent.com';
@@ -11,28 +12,38 @@ const 명단탭 = '승인 명단';
 const 칸이름 = ['이메일', '이름', '소속', '상태', '추가일', '마지막 접속일', '비고'];
 
 // 앱이 부르는 곳.
-//  확인: {"출입증": "..."}                          → {"결과": "승인" | "대기" | "중단" | "없음" | "오류"}
-//  요청: {"출입증": "...", "요청": true, "이름": "..."} → {"결과": "요청됨" | "이미" | "오류"}
+//  확인: {"신원증명서": "..."} 또는 {"출입증": "..."}  → {"결과": "승인" | "대기" | "중단" | "없음" | "오류"}
+//  요청: 위에 "요청": true, "이름": "..." 를 더한다     → {"결과": "요청됨" | "이미" | "오류"}
 function doPost(e) {
   let 답;
   try {
     const 받은 = JSON.parse(e.postData.contents);
-    답 = 받은.요청 ? 요청(받은.출입증, 받은.이름) : 확인(받은.출입증);
+    const 신분증 = 받은.신원증명서 ? { 증명서: 받은.신원증명서 } : { 출입증: 받은.출입증 };
+    답 = 받은.요청 ? 요청(신분증, 받은.이름) : 확인(신분증);
   } catch (err) {
     답 = { 결과: '오류', 까닭: String((err && err.message) || err) };
   }
   return ContentService.createTextOutput(JSON.stringify(답)).setMimeType(ContentService.MimeType.JSON);
 }
 
-// 출입증을 구글에 내밀어 주인 이메일을 알아낸다. 못 믿을 출입증이면 { 오류 }를 돌려준다
-function 이메일알기(출입증) {
-  if (!출입증) return { 오류: '출입증 없음' };
-  const r = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(출입증),
-                              { muteHttpExceptions: true });
-  if (r.getResponseCode() !== 200) return { 오류: '출입증 확인 실패' };
+// 신분증을 구글에 내밀어 주인 이메일을 알아낸다. 못 믿을 신분증이면 { 오류 }를 돌려준다
+//  신원 증명서: 구글이 서명·만료를 확인해 준다. 우리 앱에 발급한 것(aud)인지 본다
+//  출입증: 우리 앱이 받은 것인지 보고, 드라이브 권한이 든 것(기록용)은 거절한다
+function 이메일알기(신분증) {
+  const 증명서 = 신분증 && 신분증.증명서, 출입증 = 신분증 && 신분증.출입증;
+  if (!증명서 && !출입증) return { 오류: '신분증 없음' };
+  const 주소 = 증명서 ? 'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(증명서)
+                     : 'https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(출입증);
+  const r = UrlFetchApp.fetch(주소, { muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) return { 오류: '신분증 확인 실패' };
   const 정보 = JSON.parse(r.getContentText());
-  if (정보.aud !== 앱_클라이언트ID && 정보.azp !== 앱_클라이언트ID) return { 오류: '다른 앱의 출입증' };
-  if (/drive/.test(정보.scope || '')) return { 오류: '기록용 출입증은 받지 않습니다' };
+  if (증명서) {
+    if (정보.aud !== 앱_클라이언트ID) return { 오류: '다른 앱의 증명서' };
+    if (정보.iss !== 'https://accounts.google.com' && 정보.iss !== 'accounts.google.com') return { 오류: '구글이 준 증명서가 아님' };
+  } else {
+    if (정보.aud !== 앱_클라이언트ID && 정보.azp !== 앱_클라이언트ID) return { 오류: '다른 앱의 출입증' };
+    if (/drive/.test(정보.scope || '')) return { 오류: '기록용 출입증은 받지 않습니다' };
+  }
   if (!정보.email || String(정보.email_verified) !== 'true') return { 오류: '이메일 확인 안 됨' };
   return { 이메일: 정보.email.trim().toLowerCase() };
 }
@@ -53,8 +64,8 @@ function 줄찾기(m, 이메일) {
   return -1;
 }
 
-function 확인(출입증) {
-  const 나 = 이메일알기(출입증);
+function 확인(신분증) {
+  const 나 = 이메일알기(신분증);
   if (나.오류) return { 결과: '오류', 까닭: 나.오류 };
   const 잠금 = LockService.getScriptLock();
   잠금.waitLock(10000);
@@ -72,8 +83,8 @@ function 확인(출입증) {
 }
 
 // 명단에 없는 사람이 앱의 「승인 요청 보내기」를 눌렀을 때만 온다 — 누른 사람만 기록된다
-function 요청(출입증, 이름) {
-  const 나 = 이메일알기(출입증);
+function 요청(신분증, 이름) {
+  const 나 = 이메일알기(신분증);
   if (나.오류) return { 결과: '오류', 까닭: 나.오류 };
   이름 = String(이름 || '').trim().slice(0, 30);
   const 잠금 = LockService.getScriptLock();

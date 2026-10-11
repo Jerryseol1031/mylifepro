@@ -7,7 +7,7 @@
 //   __실패 = true   쓰기 요청을 전부 실패시킨다
 //   __요청수        지금까지 보낸 요청 수 (연타 합치기 확인용)
 //   __승인 = '중단'  접수 창구의 답 — '승인'(기본) · '대기' · '중단' · '없음' · '오류'(창구 고장 흉내)
-//   __신분증 = '막힘'  이메일 출입증을 조용히 못 받는 경우 흉내('확인필요' 화면). '먹통' = 답이 아예 안 옴(휴대폰)
+//   __신분증 = '먹통'  창 없는 신원 증명서가 안 오는 경우 흉내(10초 뒤 「확인필요」 화면 — 사파리·쉬는 시간). '늦게' = 12초 뒤에 온다(구글 띠를 늦게 누름)
 //   __창구에간것     창구로 보낸 본문들 — 기록용 출입증(FAKE)이 섞이지 않는지 본다
 //   새 사람 시험: 주소 끝에 ?새사람 — 기록 시트가 없는 사람으로 시작한다 (?새사람&승인=없음 처럼 함께 쓴다)
 (function () {
@@ -60,7 +60,7 @@
   window.__느림 = 700; window.__실패 = false;
   const 주소값 = new URLSearchParams(location.search);   // 예: ?승인=중단 · ?신분증=막힘 — 켜질 때부터 그 상황으로
   window.__승인 = 주소값.get('승인') || '승인'; window.__신분증 = 주소값.get('신분증') || '됨'; window.__창구에간것 = [];
-  localStorage.removeItem('pronote_승인');
+  localStorage.removeItem('pronote_승인'); localStorage.removeItem('pronote_계정');
   const 열번호 = s => { let n = 0; for (const c of s) n = n * 26 + (c.charCodeAt(0) - 64); return n - 1; };
   const 범위 = r => { const m = r.match(/^'(.+)'!([A-Z]+)(\d+)/); return { 탭: m[1], 열: 열번호(m[2]), 행: Number(m[3]) - 1 }; };
   const 응답 = (o, s) => new Response(JSON.stringify(o), { status: s || 200 });
@@ -72,7 +72,8 @@
     if (url.startsWith('https://script.google.com/')) {
       window.__창구에간것.push(opt.body);
       const 받은 = JSON.parse(opt.body);
-      if (window.__승인 === '오류' || 받은.출입증 !== 'FAKE_EMAIL') return 응답({ 결과: '오류', 까닭: '가짜 창구 오류' });
+      const 믿을만 = 받은.신원증명서 === 'FAKE_ID' || 받은.출입증 === 'FAKE_EMAIL';   // 기록용 출입증(FAKE)은 거절
+      if (window.__승인 === '오류' || !믿을만) return 응답({ 결과: '오류', 까닭: '가짜 창구 오류' });
       if (받은.요청) { const 처음 = window.__승인 === '없음'; window.__승인 = '대기'; return 응답({ 결과: 처음 ? '요청됨' : '이미', 이메일: 'tester@example.com' }); }
       return 응답({ 결과: window.__승인, 이메일: 'tester@example.com' });
     }
@@ -102,15 +103,27 @@
     return 응답({ error: '가짜 구글이 모르는 요청: ' + url }, 404);
   };
   localStorage.setItem('pronote_token', JSON.stringify({ t: 'FAKE', 만료: Date.now() + 3600e3 }));
-  // 기록용 출입증은 위에서 미리 넣어 둔다. 이메일 출입증(신분증)은 요청하면 잠시 뒤 준다
-  window.google = { accounts: { oauth2: {
-    initTokenClient: cfg => ({ requestAccessToken(o) {
-      setTimeout(() => {
-        if (cfg.scope !== 'email') cfg.callback({ access_token: 'FAKE', expires_in: 3600 });
-        else if (window.__신분증 === '막힘' && o && o.prompt === '') cfg.error_callback({ type: 'popup_failed_to_open' });
-        else if (window.__신분증 === '먹통' && o && o.prompt === '') return;   // 답이 안 온다
-        else cfg.callback({ access_token: 'FAKE_EMAIL' });
-      }, window.__느림);
-    } }),
-    hasGrantedAllScopes: () => true } } };
+  // 기록용 출입증은 위에서 미리 넣어 둔다. 회원 확인용 신분증은 요청하면 잠시 뒤 준다
+  //  · 창 없이: 신원 증명서(FAKE_ID) — __신분증으로 안 오거나 늦게 오게 할 수 있다
+  //  · 단추를 눌렀을 때: 이메일 출입증(FAKE_EMAIL)
+  let 증명서설정 = null;
+  window.__구글에준힌트 = [];   // 구글에 「이 계정으로」라고 알린 값들 — 계정 선택 화면 막기 확인용
+  window.google = { accounts: {
+    oauth2: {
+      initTokenClient: cfg => ({ requestAccessToken(o) {
+        window.__구글에준힌트.push((cfg.scope === 'email' ? '이메일창:' : '기록창:') + ((o && o.hint) || '없음'));
+        setTimeout(() => {
+          if (cfg.scope !== 'email') cfg.callback({ access_token: 'FAKE', expires_in: 3600 });
+          else cfg.callback({ access_token: 'FAKE_EMAIL' });
+        }, window.__느림);
+      } }),
+      hasGrantedAllScopes: () => true },
+    id: {
+      initialize: cfg => { 증명서설정 = cfg; window.__구글에준힌트.push('증명서:' + (cfg.login_hint || '없음')); },
+      prompt: () => {
+        const 상태 = window.__신분증;
+        if (상태 === '먹통' || 상태 === '막힘') return;   // 답이 안 온다 (사파리·쉬는 시간)
+        setTimeout(() => 증명서설정.callback({ credential: 'FAKE_ID', select_by: 'fedcm_auto' }), 상태 === '늦게' ? 12000 : window.__느림);
+      },
+      disableAutoSelect: () => {} } } };
 })();

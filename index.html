@@ -155,10 +155,11 @@
   const SHEET_NAME = '프로 노트 — 기록';
   const MARK_KEY = 'pronote', MARK_VALUE = 'sheet';
   const 출입증키 = 'pronote_token';
-  // 사용 승인 (설계 3-3). 접수 창구에는 「이메일만 든 출입증」만 보낸다 — 기록용 출입증(token)은 절대 보내지 않는다 (8j.1)
+  // 사용 승인 (설계 3-3). 접수 창구에는 「신원 증명서」나 「이메일만 든 출입증」만 보낸다 — 기록용 출입증(token)은 절대 보내지 않는다 (8j.1)
   const 창구주소 = 'https://script.google.com/macros/s/AKfycbyrFHPBJDViZfOjJYyiS_hwJwjDqOPnwGgbv1rTk1DA0-U0rhyY91oBsuAXRqDCgZD2/exec';
   const 이메일범위 = 'email';
   const 승인키 = 'pronote_승인';   // 오늘 이미 승인받았으면 다시 묻지 않는다 (하루 한 번 — 8j.2)
+  const 계정키 = 'pronote_계정';   // 기록 계정 이메일. 구글에 「이 계정으로」라고 알려 계정 선택 화면이 안 뜨게 한다
 
   const TABS = [
     ['로드맵',   ['연도','비전','미션','꿈꾸는 삶의 모습','3년 후','1년 후','수정시각']],
@@ -204,7 +205,8 @@
   const msg = document.getElementById('msg');
   let token = null, tokenClient = null, 시트ID = null, 받는중 = null;
   let 이메일창 = null, 신분증받는중 = null, 내이메일 = null, 막힘 = null;   // 막힘: 승인이 안 됐을 때 보여 줄 것
-  let 마지막신분증 = null;   // 승인 요청을 보낼 때 다시 쓴다 (한 시간 유효)
+  let 마지막신분증 = null;   // 승인 요청을 보낼 때 다시 쓴다 (한 시간 유효). { 종류: '증명서' | '출입증', 값 }
+  let 증명서준비됨 = false;
   let 단위 = '일';               // 보고 있는 회고: '일' · '주' · '분기' · '연'
   let 보는날 = 자정(new Date());   // 주간일 때는 이 날이 든 주를 본다
   const 안쓴글 = new Map();   // 저장 안 한 글: 칸 열쇠 → 적은 글. 다시 그려도 남긴다
@@ -266,23 +268,56 @@
     let 성공, 실패;
     const 약속 = new Promise((a, b) => { 성공 = a; 실패 = b; });
     받는중 = { 약속, 성공, 실패 };
-    tokenClient.requestAccessToken(계정고르기 ? { prompt: 'select_account' } : 조용히 ? { prompt: '' } : {});
+    const 옵션 = 계정고르기 ? { prompt: 'select_account' } : 조용히 ? { prompt: '' } : {};
+    // 여러 계정이 로그인된 기기에서 다시 열 때 계정 선택 화면이 뜨지 않게, 기록 계정을 알려 준다
+    const 계정 = !계정고르기 && 기억한계정();
+    if (계정) 옵션.hint = 계정;
+    tokenClient.requestAccessToken(옵션);
     return 약속;
   }
 
-  // 이메일만 든 출입증(신분증). 기록용과 따로 받는다 — 드라이브는 못 연다 (8j.1, 2026-10-10 시험으로 확인)
+  function 기억한계정() { try { return 내이메일 || localStorage.getItem(계정키); } catch (e) { return 내이메일; } }
+  function 계정기억하기(이메일) { try { if (이메일) localStorage.setItem(계정키, 이메일); else localStorage.removeItem(계정키); } catch (e) {} }
+
+  // 회원 확인에 쓰는 신분증 — 기록용 출입증과 따로 받는다. 둘 다 드라이브는 못 연다 (8j.1)
+  //  · 조용히: 구글 「신원 증명서」(ID 토큰). 크롬은 전에 고른 계정이면 창 없이 준다 (2026-10-11 휴대폰 시험)
+  //  · 단추를 눌렀을 때: 이메일만 든 출입증 — 구글 창이 뜬다
   function 신분증받기(조용히) {
     if (신분증받는중) return 신분증받는중.약속;
     let 성공, 실패;
     const 약속 = new Promise((a, b) => { 성공 = a; 실패 = b; });
-    신분증받는중 = { 약속, 성공, 실패 };
-    const 옵션 = 조용히 ? { prompt: '' } : {};
-    if (내이메일) 옵션.hint = 내이메일;   // 여러 계정이 로그인돼 있어도 기록 계정과 같은 계정으로
-    이메일창.requestAccessToken(옵션);
-    // 휴대폰에서는 단추를 누르지 않고 띄운 구글 창이 막혀 답이 아예 안 오기도 한다(2026-10-10 실제 시험).
-    // 그대로 두면 확인 없이 계속 쓰게 되므로, 오래 걸리면 「회원 확인」 단추로 넘긴다
-    if (조용히) setTimeout(() => { if (신분증받는중 && 신분증받는중.약속 === 약속) { 신분증받는중 = null; 실패(new Error('시간 초과')); } }, 15000);
+    신분증받는중 = { 약속, 성공, 실패, 조용히 };
+    if (조용히) {
+      증명서준비();
+      google.accounts.id.prompt();
+      // 못 받으면(쉬는 시간·사파리·처음 쓰는 사람) 「회원 확인」 단추로 넘긴다. 기다리는 동안에도 화면은 쓸 수 있다
+      setTimeout(() => { if (신분증받는중 && 신분증받는중.약속 === 약속) { 신분증받는중 = null; 실패(new Error('시간 초과')); } }, 10000);
+    } else {
+      const 옵션 = {};
+      const 계정 = 기억한계정();
+      if (계정) 옵션.hint = 계정;
+      이메일창.requestAccessToken(옵션);
+    }
     return 약속;
+  }
+
+  // 구글 로그인 계열은 처음 한 번만 준비한다. 그때 기록 계정을 알려 다른 계정이 골라지지 않게 한다
+  function 증명서준비() {
+    if (증명서준비됨) return;
+    증명서준비됨 = true;
+    const 설정 = { client_id: CLIENT_ID, callback: 증명서받음, auto_select: true, use_fedcm_for_prompt: true,
+                  itp_support: true, cancel_on_tap_outside: false };
+    const 계정 = 기억한계정();
+    if (계정) 설정.login_hint = 계정;
+    google.accounts.id.initialize(설정);
+  }
+
+  function 증명서받음(resp) {
+    const 신분증 = { 종류: '증명서', 값: resp.credential };
+    const 요청 = 신분증받는중;
+    if (요청 && 요청.조용히) { 신분증받는중 = null; 요청.성공(신분증); return; }
+    // 10초가 지나 단추 화면으로 넘어간 뒤에 받았으면(사파리 등에서 구글 띠를 늦게 누른 경우) 그것으로 확인한다
+    if (!요청 && 막힘 && 막힘.결과 === '확인필요') 다시확인(신분증);
   }
 
   function initGoogle() {
@@ -308,7 +343,7 @@
       callback: resp => {
         const 요청 = 신분증받는중; 신분증받는중 = null;
         if (!요청) return;
-        if (resp.error) 요청.실패(new Error(resp.error)); else 요청.성공(resp.access_token);
+        if (resp.error) 요청.실패(new Error(resp.error)); else 요청.성공({ 종류: '출입증', 값: resp.access_token });
       },
       error_callback: err => {
         const 요청 = 신분증받는중; 신분증받는중 = null;
@@ -384,24 +419,26 @@
 
   async function 내이메일알기() {
     if (내이메일) return;
-    try { const 나 = await api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)'); 내이메일 = (나.user && 나.user.emailAddress) || null; }
+    try { const 나 = await api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)'); 내이메일 = (나.user && 나.user.emailAddress) || null; 계정기억하기(내이메일); }
     catch (e) {}
   }
 
   // 기록용 출입증이 섞이지 않게 api()를 쓰지 않고 직접 보낸다. text/plain이라 브라우저가 따로 묻지 않는다
-  async function 창구에보내기(본문) {
+  async function 창구에보내기(신분증, 더할것) {
+    const 본문 = Object.assign(신분증.종류 === '증명서' ? { 신원증명서: 신분증.값 } : { 출입증: 신분증.값 }, 더할것 || {});
     const r = await fetch(창구주소, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(본문) });
     return r.json();
   }
 
   // 결과: 승인 · 대기 · 중단 · 없음 · 다른계정 · 확인필요(신분증을 조용히 못 받음 — 단추를 눌러야 한다) · 모름(창구·구글에 닿지 못함)
-  async function 대조(조용히) {
+  // 받은신분증: 단추 화면으로 넘어간 뒤 늦게 온 신원 증명서
+  async function 대조(조용히, 받은신분증) {
     await 내이메일알기();
-    let 신분증;
-    try { 신분증 = await 신분증받기(조용히); } catch (e) { return { 결과: '확인필요' }; }
+    let 신분증 = 받은신분증;
+    if (!신분증) try { 신분증 = await 신분증받기(조용히); } catch (e) { return { 결과: '확인필요' }; }
     마지막신분증 = 신분증;
     let 답;
-    try { 답 = await 창구에보내기({ 출입증: 신분증 }); } catch (e) { return { 결과: '모름' }; }
+    try { 답 = await 창구에보내기(신분증); } catch (e) { return { 결과: '모름' }; }
     if (!['승인', '대기', '중단', '없음'].includes(답.결과)) return { 결과: '모름' };
     if (내이메일 && 답.이메일 && 답.이메일 !== 내이메일.toLowerCase()) return { 결과: '다른계정', 이메일: 답.이메일 };
     return 답;
@@ -443,7 +480,7 @@
       글('아래 단추를 누르면 구글 창이 뜹니다. 「계속」을 누르면 이메일 주소만 확인합니다. 기록에는 손대지 않습니다.');
       const b = 요소('button', '작은단추', '회원 확인하기');
       b.style.marginTop = '10px';
-      b.addEventListener('click', 다시확인);
+      b.addEventListener('click', () => 다시확인());
       카드.appendChild(b);
     } else if (막힘.결과 === '중단') {
       제목('프로 노트 사용 기간이 끝났습니다');
@@ -469,7 +506,7 @@
         알림('요청을 보내는 중…', 'step');
         try {
           if (!마지막신분증) 마지막신분증 = await 신분증받기(false);
-          const 답 = await 창구에보내기({ 출입증: 마지막신분증, 요청: true, 이름: 이름칸.value });
+          const 답 = await 창구에보내기(마지막신분증, { 요청: true, 이름: 이름칸.value });
           if (답.결과 !== '요청됨' && 답.결과 !== '이미') throw new Error(답.까닭 || '알 수 없는 답');
           막기(답);
         } catch (e) {
@@ -486,8 +523,8 @@
     화면.appendChild(카드);
   }
 
-  async function 다시확인() {
-    const 답 = await 대조(false);   // 단추를 눌러서 하므로 구글 창을 띄워도 된다
+  async function 다시확인(받은신분증) {
+    const 답 = await 대조(false, 받은신분증);   // 단추를 눌러서 하므로 구글 창을 띄워도 된다
     if (답.결과 !== '승인') { if (답.결과 === '모름') 알림('회원 확인 창구에 닿지 못했습니다. 잠시 뒤 다시 눌러 주세요.', 'err'); else 막기(답); return; }
     승인두기(); 막힘 = null; 화면.innerHTML = '';
     try {
@@ -497,8 +534,10 @@
   }
 
   async function 다른계정으로() {
-    출입증지우기(); 승인지우기();
-    token = null; 시트ID = null; 내이메일 = null; 막힘 = null; 자료 = null; 화면.innerHTML = '';
+    출입증지우기(); 승인지우기(); 계정기억하기(null);
+    // 신원 증명서도 앞 계정으로 저절로 골라지지 않게 한다. 다음 확인 때 새 계정으로 다시 준비한다
+    if (증명서준비됨) { google.accounts.id.disableAutoSelect(); 증명서준비됨 = false; }
+    token = null; 시트ID = null; 내이메일 = null; 막힘 = null; 마지막신분증 = null; 자료 = null; 화면.innerHTML = '';
     try { await 출입증받기(false, true); await 준비(); }
     catch (e) { loginBtn.disabled = false; loginBtn.style.display = ''; 알림('로그인 창이 닫혔습니다. 다시 눌러 주세요.', 'step'); }
   }
