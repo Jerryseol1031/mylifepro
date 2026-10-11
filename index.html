@@ -42,6 +42,9 @@
   .참고줄 b { display:inline-block; width:14px; font-weight:400; color:var(--muted); }
   .고정제목 { margin-top:2px; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
   .참고메모 { color:var(--muted); margin-left:8px; }
+  .참고 > .고정제목:not(:first-child) { margin-top:10px; }
+  .참고주제 { display:flex; align-items:center; gap:5px; margin:6px 0 1px; font-weight:600; color:#3d4a44; }
+  .참고줄.묶인줄 { padding-left:14px; }
   .평가메모 { font-size:12px; color:var(--muted); margin-top:3px; line-height:1.45; word-break:break-word; }
   .지난핵심 { background:var(--soft); border-color:var(--soft); }
   .지난핵심 .참고제목 { margin-top:0; }
@@ -941,7 +944,7 @@
         const 머리 = 요소('button','참고머리', '분기 핵심 목표 ' + (펼침 ? '▾' : '▸'));
         머리.appendChild(요소('span', null, ' ' + 핵심목표.length + '개'));        머리.addEventListener('click', () => { 핵심목표펼침 = !핵심목표펼침; 화면그리기(); });
         고정.appendChild(머리);
-        if (펼침) 핵심목표.forEach(h => 고정.appendChild(참고항목줄(h)));
+        if (펼침) 주제별참고(고정, 핵심목표);
       }
       const 제목 = 요소('div','참고제목 고정제목', 위.고정);
       고정.appendChild(제목);
@@ -953,7 +956,7 @@
       };
       if (상위.length) {
         if (위.화면) 제목.appendChild(가기단추(위.화면));
-        상위.forEach(h => 고정.appendChild(참고항목줄(h)));
+        주제별참고(고정, 상위);
       } else {
         const 없음 = 요소('div','참고줄', 위.없음);
         없음.appendChild(가기단추(위.세우기));
@@ -967,13 +970,30 @@
     return 참고접는칸(영역, 자료, 보기, 상위);
   }
 
-  // 참고의 항목 한 줄 — 평가 기호 · 계획 · 주제. 메모까지면 평가메모를 뒤에 붙인다 (분기·연간 — 8k.6)
+  // 참고의 항목 한 줄 — 평가 기호 · 계획. 메모까지면 평가메모를 뒤에 붙인다 (분기·연간 — 8k.6)
   function 참고항목줄(h, 메모까지) {
     const 줄 = 요소('div','참고줄');
-    const 주제 = 주제이름(h);
-    줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(h.계획 + (주제 ? ' · ' + 주제 : '')));
+    줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(h.계획));
     if (메모까지 && h.평가메모) 줄.appendChild(요소('span','참고메모', '메모: ' + h.평가메모));
     return 줄;
+  }
+  // 참고 목록도 계획 칸처럼 주제로 묶는다 — 주제 없는 항목은 제목 없이 맨 위, 그 아래 주제 순서대로 (사용자, 2026-10-11)
+  function 주제별참고(틀, 항목들, 메모까지) {
+    항목들.filter(h => !h.주제ID).forEach(h => 틀.appendChild(참고항목줄(h, 메모까지)));
+    const 차례 = [...new Set(항목들.map(h => h.주제ID).filter(Boolean))].sort((a, b) => {
+      const za = 자료.주제맵.get(a), zb = 자료.주제맵.get(b);
+      const 값 = z => !z ? [2, 0] : [z.빼둠 || z.지움 ? 1 : 0, z.순서];   // 목록에 있는 주제 → 빼 둔·지운 주제 → 설정에 없는 주제
+      const [a1, a2] = 값(za), [b1, b2] = 값(zb);
+      return a1 - b1 || a2 - b2;
+    });
+    차례.forEach(id => {
+      const 묶음 = 항목들.filter(h => h.주제ID === id);
+      const 제목 = 요소('div','참고주제');
+      const 점 = 요소('span','점'); 점.style.background = 주제색(자료.주제맵.get(id));
+      제목.append(점, document.createTextNode(주제이름(묶음[0])));
+      틀.appendChild(제목);
+      묶음.forEach(h => { const 줄 = 참고항목줄(h, 메모까지); 줄.classList.add('묶인줄'); 틀.appendChild(줄); });
+    });
   }
 
   function 참고접는칸(영역, 자료, 보기, 상위) {
@@ -1000,7 +1020,7 @@
 
     const 목록 = (제목, 항목들) => {
       몸.appendChild(요소('div','참고제목', 제목));
-      항목들.forEach(h => 몸.appendChild(참고항목줄(h, 분기형(보기))));
+      주제별참고(몸, 항목들, 분기형(보기));
     };
     if (상위.length) 목록(보기.상위.이름, 상위);
     if (지난.length || 지난피드백) {
