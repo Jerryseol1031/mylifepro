@@ -20,6 +20,7 @@
 
   .단위들 { display:flex; background:var(--bg); border-radius:9px; padding:3px; margin-bottom:10px; }
   .단위들 button { flex:1; border:0; background:none; padding:6px 0; border-radius:7px; font-size:13px; color:var(--muted); }
+  .단위들 button.가끔 { flex:0 0 56px; font-size:12px; color:#9a9a9a; }
   .단위들 button.골라짐 { background:#fff; color:var(--fg); font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.08); }
   .날짜줄 { display:flex; align-items:center; gap:8px; }
   .날짜줄 .넘김 { width:34px; height:34px; flex:none; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:13px; color:var(--fg); }
@@ -850,10 +851,9 @@
   function 날짜카드(보기) {
     const card = 요소('div','card');
     const 단위들 = 요소('div','단위들');
-    // 분기는 탭이 아니다 — 분기를 보는 동안에만 골라진 단추로 하나 더 붙는다 (설계 6장 「분기·연간」)
-    const 단추들 = [['일','일간'],['주','주간']].concat(단위 === '분기' ? [['분기','분기']] : []);
-    단추들.forEach(([값, 글]) => {
-      const b = 요소('button', 단위 === 값 ? '골라짐' : null, 글);
+    // 분기는 가끔 누르므로 일간·주간보다 좁고 흐리게 둔다 — 한 번에 닿되 눈은 일간·주간에 먼저 간다 (사용자, 2026-10-11)
+    [['일','일간'],['주','주간'],['분기','분기']].forEach(([값, 글]) => {
+      const b = 요소('button', (값 === '분기' ? '가끔 ' : '') + (단위 === 값 ? '골라짐' : ''), 글);
       b.addEventListener('click', () => 단위바꾸기(값));
       단위들.appendChild(b);
     });
@@ -875,13 +875,6 @@
       오늘로.addEventListener('click', () => 넘기기(0));
       알림줄.appendChild(오늘로);
       card.appendChild(알림줄);
-    }
-    // 임시 길 — 주간 화면의 「이번 분기 계획」 자리에 「분기 화면 ›」을 붙이면([4-5] ③) 걷는다
-    if (단위 === '주') {
-      const 분기로 = 요소('button','글자단추','분기 화면 ›');
-      분기로.style.display = 'block'; 분기로.style.marginLeft = 'auto';
-      분기로.addEventListener('click', () => 단위바꾸기('분기'));
-      card.appendChild(분기로);
     }
     return card;
   }
