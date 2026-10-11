@@ -29,6 +29,14 @@
   const 적기 = t => { 기록칸.textContent += '[' + 초() + '] ' + t + '\n'; };
   const 판정 = (t, c) => { 판정칸.textContent = t; 판정칸.className = c || ''; };
   let 사용자가눌렀나 = false;
+  // 진단: 구글 스크립트가 콘솔에 남기는 말을 이 화면에도 적는다 (휴대폰에서는 콘솔을 볼 수 없으므로)
+  ['log', 'info', 'warn', 'error', 'debug'].forEach(종류 => {
+    const 원래 = console[종류].bind(console);
+    console[종류] = (...a) => { 원래(...a); try { 적기('〔' + 종류 + '〕 ' + a.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join(' ')); } catch (e) {} };
+  });
+  window.addEventListener('error', e => 적기('〔오류〕 ' + e.message));
+  window.addEventListener('unhandledrejection', e => 적기('〔오류〕 ' + (e.reason && (e.reason.name + ': ' + e.reason.message))));
+  적기('구글 상태 쿠키(g_state): ' + ((document.cookie.match(/g_state=([^;]*)/) || [])[1] || '없음'));
 
   try {
     const 지난 = localStorage.getItem('idtoken_시험_마지막성공');
@@ -69,7 +77,8 @@
       auto_select: true,            // 전에 고른 계정이 하나면 묻지 않고 바로
       use_fedcm_for_prompt: true,   // 크롬의 새 로그인 방식
       itp_support: true,
-      cancel_on_tap_outside: false
+      cancel_on_tap_outside: false,
+      log_level: 'debug'            // 진단: 건너뛴 까닭을 자세히 남기게 한다
     });
     google.accounts.id.prompt(n => {
       try {
@@ -77,6 +86,7 @@
         if (n.isSkippedMoment && n.isSkippedMoment()) { 적기('건너뜀: ' + n.getSkippedReason()); 판정('❌ 창 없이 못 받았습니다 (건너뜀)', '안됨'); }
         if (n.isDismissedMoment && n.isDismissedMoment()) 적기('닫힘: ' + n.getDismissedReason());
       } catch (e) { 적기('알림: ' + JSON.stringify(n)); }
+      적기('구글 상태 쿠키(g_state) 지금: ' + ((document.cookie.match(/g_state=([^;]*)/) || [])[1] || '없음'));
     });
     google.accounts.id.renderButton(document.getElementById('단추자리'), { type: 'standard', text: 'signin_with' });
     document.getElementById('단추자리').addEventListener('click', () => { 사용자가눌렀나 = true; }, true);
