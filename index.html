@@ -43,6 +43,10 @@
   .고정제목 { margin-top:2px; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
   .참고메모 { color:var(--muted); padding-left:14px; }
   /* 항목 고치기 — 제목 · 상세 · 평가메모를 이름표와 모양으로 나눈다 */
+  .고치기펼침 { border-color:var(--accent); }
+  .고치기머리 { display:flex; justify-content:space-between; align-items:baseline; gap:8px; width:100%; border:0; background:none;
+    padding:0 0 8px; margin-bottom:10px; border-bottom:1px solid var(--line); text-align:left; font-size:14px; font-weight:600; color:var(--fg); }
+  .고치기머리 .접기글 { flex:none; font-size:12px; color:var(--accent); }
   .구역이름 { font-size:12px; font-weight:700; color:var(--accent); margin:2px 0 4px; }
   .구역이름.평가구역 { margin-top:14px; padding-top:10px; border-top:1px dashed var(--line); }
   .고치기평가 { gap:6px; }
@@ -1457,7 +1461,7 @@
       return li;
     }
     글.title = '눌러서 고치기 · 주제 붙이기';
-    글.addEventListener('click', () => li.replaceWith(항목고치기줄(h, li, 영역)));
+    글.addEventListener('click', () => { if (고치기닫기(true)) li.replaceWith(항목고치기줄(h, li, 영역)); });
 
     const 평가들 = 요소('div','평가들');
     평가모양.forEach(([값, 기호글]) => {
@@ -1480,8 +1484,25 @@
     return li;
   }
 
+  // 고치기 칸은 한 번에 하나 — 항목 아래로 펼치고, 맨 위 머리줄을 누르면 접힌다 (8k.16).
+  // 고친 내용이 있으면 접기 전에 묻는다 — 쓰다 만 글이 모르는 사이에 저장되지 않게
+  let 열린고치기 = null;   // { li, 원래, 바뀜 }
+  function 고치기닫기(물어보기) {
+    const 열린 = 열린고치기;
+    if (!열린) return true;
+    if (!열린.li.isConnected) { 열린고치기 = null; return true; }   // 화면을 다시 그려 이미 사라졌다
+    if (물어보기 && 열린.바뀜() && !confirm('고친 내용을 저장하지 않고 접을까요?')) return false;
+    열린고치기 = null;
+    열린.li.replaceWith(열린.원래);
+    return true;
+  }
+
   function 항목고치기줄(h, 원래, 영역) {
-    const li = 요소('li');
+    const li = 요소('li','고치기펼침');
+    const 머리 = 요소('button','고치기머리');
+    머리.append(요소('span', null, 제목만(h.계획)), 요소('span','접기글','▴ 접기'));
+    머리.addEventListener('click', () => 고치기닫기(true));
+    li.appendChild(머리);
     const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200; inp.value = 제목만(h.계획);
     inp.classList.add('제목칸');
     // 상세 — 분기·연간만 쓰는 칸을 연다. 일간·주간은 시트에서 손으로 넣은 상세가 있으면 그대로 지킨다 (8k.13)
@@ -1528,6 +1549,7 @@
       h.계획 = 글;
       if (z !== undefined) { h.주제ID = z ? z.id : ''; h.주제사본 = z ? z.이름 : ''; }
       if (메모칸) { h.평가메모 = 메모칸.value.trim(); h.평가 = 고른평가; }
+      열린고치기 = null;
       화면그리기();
       const 값 = { '계획':글, '주제ID':h.주제ID, '주제':h.주제사본, '수정시각':지금() };
       if (메모칸) { 값['평가메모'] = h.평가메모; 값['평가'] = h.평가; }
@@ -1541,10 +1563,14 @@
     // 행을 진짜 지우지 않고 「삭제」 표시만 한다 (설계 5-6)
     지우기.addEventListener('click', () => {
       if (!confirm('이 항목을 지울까요?')) return;
+      열린고치기 = null;
       자료.항목들 = 자료.항목들.filter(x => x !== h); 화면그리기();
       저장하기(() => 행찾아쓰기('계획항목', (행, v) => v(행,'항목ID') === h.id, { '삭제됨':'삭제', '수정시각':지금() }));
     });
-    취소.addEventListener('click', () => li.replaceWith(원래));
+    취소.addEventListener('click', () => 고치기닫기(false));   // 취소는 버리겠다는 뜻이라 묻지 않는다
+    const 지금값 = () => [inp.value, 상세칸 && 상세칸.value, 메모칸 && 메모칸.value, 고른평가].join('\u0001');
+    const 처음값 = 지금값();
+    열린고치기 = { li, 원래, 바뀜: () => 지금값() !== 처음값 };
     inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.isComposing) 저장.click(); });
     // 분기·연간: 「계획」(제목·상세·주제)과 「평가」(○△✕·평가메모) 두 구역, 단추는 맨 아래 한 줄 — 모든 칸에 대한 것이라 (사용자, 2026-10-11)
     // 일간·주간: 제목 한 칸 + 주제, 평가는 항목 줄의 ○△✕ 그대로
