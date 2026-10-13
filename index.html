@@ -26,6 +26,8 @@
   .날짜줄 { display:flex; align-items:center; gap:8px; }
   .날짜줄 .넘김 { width:34px; height:34px; flex:none; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:13px; color:var(--fg); }
   .날짜 { flex:1; text-align:center; font-size:15px; font-weight:600; }
+  .날짜 { position:relative; cursor:pointer; }
+  .달력칸 { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; border:0; padding:0; }
   .날짜 small { display:block; font-size:11px; font-weight:500; color:var(--muted); margin-top:1px; }
   .다른날 { margin-top:8px; padding:6px 10px; border-radius:8px; background:#fff4e0; color:var(--warn); font-size:12px; display:flex; justify-content:space-between; align-items:center; }
   .다른날 button { border:0; background:none; color:var(--accent); font-weight:600; font-size:12px; padding:0; }
@@ -44,9 +46,9 @@
   .참고메모 { color:var(--muted); padding-left:14px; }
   /* 항목 고치기 — 제목 · 상세 · 평가메모를 이름표와 모양으로 나눈다 */
   .고치기펼침 { border-color:var(--accent); }
-  .고치기머리 { display:flex; justify-content:space-between; align-items:baseline; gap:8px; width:100%; border:0; background:none;
-    padding:0 0 8px; margin-bottom:10px; border-bottom:1px solid var(--line); text-align:left; font-size:14px; font-weight:600; color:var(--fg); }
-  .고치기머리 .접기글 { flex:none; font-size:12px; color:var(--accent); }
+  .고치기머리 { display:flex; align-items:center; gap:8px; padding:0 0 8px; margin-bottom:10px; border-bottom:1px solid var(--line); }
+  .고치기머리 .제목칸 { flex:1; }
+  .고치기머리 .접기글 { flex:none; border:0; background:none; padding:8px 2px; font-size:12px; font-weight:600; color:var(--accent); }
   .구역이름 { font-size:12px; font-weight:700; color:var(--accent); margin:2px 0 4px; }
   .구역이름.평가구역 { margin-top:14px; padding-top:10px; border-top:1px dashed var(--line); }
   .고치기평가 { gap:6px; }
@@ -146,6 +148,7 @@
   /* 계획·피드백은 영역 안의 구획 제목이다 — 점선으로 구획을 나누고, 색 막대와 굵은 글씨로 제목임을 보인다 */
   .칸제목 { font-size:12px; font-weight:700; color:var(--accent); letter-spacing:.3px;
     margin:12px 0 6px; padding:10px 0 0 8px; border-top:1px dashed var(--line); position:relative; }
+  .칸제목 .제목달성률 { margin-left:auto; margin-right:8px; letter-spacing:0; }
   .칸제목::before { content:''; position:absolute; left:0; top:11px; bottom:1px; width:3px; border-radius:2px; background:var(--accent); }
   .저장줄 { display:flex; justify-content:flex-end; margin-top:6px; }
 
@@ -743,7 +746,8 @@
       return { 단위:'분기', 기간: 분.연 + '-Q' + 분.q, 제목: 분.연 + '년 ' + 분.q + '분기',
         꼬리: 월일(분.시작) + ' ~ ' + 월일(하루뒤(분.끝, -1)) + ({'-1':' · 지난 분기', '0':' · 이번 분기', '1':' · 다음 분기'}[String(차이)] || ''),
         지금인가: 차이 === 0, 과거: 차이 < 0, 안내: '이번 분기 항목 한 줄', 이: '분기',
-        상위: { 단위:'연', 기간: String(분.연), 고정: '이번 해 계획 · ' + 분.연 + '년',
+        // 상위 계획 제목은 「2026년 핵심 목표」처럼 기간 + 영역 이름 (사용자, 2026-10-14)
+        상위: { 단위:'연', 기간: String(분.연), 고정: '이번 해 계획 · ' + 분.연 + '년', 고정이름: 영역 => 분.연 + '년 ' + 영역.이름,
           없음: '연간 계획 없음 — ', 세우기: '연간에서 세우기 ›', 화면: '연간 화면 ›', 가기: () => 단위바꾸기('연') },
         지난: { 단위:'분기', 기간: 전.연 + '-Q' + 전.q, 이름: '지난 분기 · ' + 전.연 + '년 ' + 전.q + '분기', 짧게: '지난 분기',
           핵심문제: '지난 분기 핵심 문제 · ' + 전.연 + '년 ' + 전.q + '분기' } };
@@ -936,6 +940,15 @@
     const 뒤 = 요소('button','넘김','▶'); 뒤.setAttribute('aria-label', 이름표[1]);
     const 가운데 = 요소('div','날짜', 보기.제목);
     if (보기.꼬리) 가운데.appendChild(요소('small', null, 보기.꼬리));
+    // 날짜를 누르면 달력 — 고른 날이 든 기간(그날 · 그 주 · 그 분기 · 그 해)으로 바로 간다 (사용자, 2026-10-14)
+    const 달력 = 요소('input','달력칸'); 달력.type = 'date'; 달력.value = 날짜글(보는날); 달력.setAttribute('aria-label','날짜 고르기');
+    달력.addEventListener('change', () => {
+      const m = 달력.value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m || !넘겨도되나()) { 달력.value = 날짜글(보는날); return; }
+      보는날 = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      그리기();
+    });
+    가운데.appendChild(달력);
     앞.addEventListener('click', () => 넘기기(-1));
     뒤.addEventListener('click', () => 넘기기(1));
     줄.append(앞, 가운데, 뒤);
@@ -1029,7 +1042,7 @@
     if (위.고정 && 영역.기간[위.단위]) {
       const 묶음 = 요소('div');
       const 고정 = 요소('div','참고');
-      const 제목 = 요소('div','참고제목 고정제목', 위.고정);
+      const 제목 = 요소('div','참고제목 고정제목', 위.고정이름 ? 위.고정이름(영역) : 위.고정);
       고정.appendChild(제목);
       const 가기단추 = 글 => {
         const b = 요소('button','글자단추', 글);
@@ -1122,8 +1135,6 @@
     const 항목들 = 자료.항목들.filter(h => h.영역ID === 영역.id);
     const 머리 = 요소('div','영역머리');
     머리.appendChild(요소('div','영역이름', 영역.이름));
-    const 률 = 달성률(항목들);
-    if (률 != null) 머리.appendChild(요소('div','달성률', '달성률 ' + 률 + '%'));
     card.appendChild(머리);
 
     const 참고 = 참고블록(영역, 자료, 보기);
@@ -1132,6 +1143,9 @@
     // 계획 제목 옆 「순서」 — 누르면 평가 단추 자리에 ▲▼가 나와 항목·주제 순서를 바꾼다
     const 순서중 = 순서모드.has(영역.id);
     const 제목줄 = 요소('div','칸제목', '계획·평가');   // 항목마다 계획과 평가가 함께 있다 (사용자, 2026-10-11)
+    // 달성률은 평가한 항목들 바로 위 — 무엇의 달성률인지 바로 보이게 (사용자, 2026-10-14)
+    const 률 = 달성률(항목들);
+    if (률 != null) 제목줄.appendChild(요소('span','달성률 제목달성률', '달성률 ' + 률 + '%'));
     if (항목들.length > 1 || (순서중)) {
       const 순서단추 = 요소('button','순서단추', 순서중 ? '완료' : '순서 변경');
       순서단추.addEventListener('click', () => { 순서중 ? 순서모드.delete(영역.id) : 순서모드.add(영역.id); 화면그리기(); });
@@ -1499,12 +1513,14 @@
 
   function 항목고치기줄(h, 원래, 영역) {
     const li = 요소('li','고치기펼침');
-    const 머리 = 요소('button','고치기머리');
-    머리.append(요소('span', null, 제목만(h.계획)), 요소('span','접기글','▴ 접기'));
-    머리.addEventListener('click', () => 고치기닫기(true));
-    li.appendChild(머리);
+    // 머리줄 = 제목을 고치는 칸 + 「▴ 접기」. 제목은 여기 한 곳에서만 고친다 (사용자, 2026-10-14)
+    const 머리 = 요소('div','고치기머리');
     const inp = 요소('input'); inp.type = 'text'; inp.maxLength = 200; inp.value = 제목만(h.계획);
-    inp.classList.add('제목칸');
+    inp.classList.add('제목칸'); inp.setAttribute('aria-label','제목');
+    const 접기 = 요소('button','접기글','▴ 접기');
+    접기.addEventListener('click', () => 고치기닫기(true));
+    머리.append(inp, 접기);
+    li.appendChild(머리);
     // 상세 — 분기·연간만 쓰는 칸을 연다. 일간·주간은 시트에서 손으로 넣은 상세가 있으면 그대로 지킨다 (8k.13)
     const 상세칸 = 분기형(보기) ? 요소('textarea') : null;
     if (상세칸) {
@@ -1578,8 +1594,6 @@
     if (상세칸) li.appendChild(요소('div','구역이름','계획'));
     const 고르개 = 주제고르개(h, 영역, 항목쓰기); 고르개.style.marginTop = '0'; 고르개.style.marginBottom = '4px';
     li.appendChild(고르개);
-    if (상세칸) li.appendChild(요소('div','칸이름','제목'));
-    li.appendChild(inp);
     if (상세칸) { li.appendChild(요소('div','칸이름','상세 (선택)')); li.appendChild(상세칸); 글머리(상세칸); }
     if (메모칸) {   // 여러 줄이라 엔터는 줄바꿈 — 저장은 단추로
       li.appendChild(요소('div','구역이름 평가구역','평가'));
