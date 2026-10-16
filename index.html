@@ -27,7 +27,22 @@
   .날짜줄 .넘김 { width:34px; height:34px; flex:none; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:13px; color:var(--fg); }
   .날짜 { flex:1; text-align:center; font-size:15px; font-weight:600; }
   .날짜 { position:relative; cursor:pointer; }
-  .달력칸 { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; border:0; padding:0; }
+  .달력표 { font-size:11px; color:var(--accent); }
+  .달력판 { margin-top:10px; padding:8px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+  .달력머리 { display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:14px; margin-bottom:6px; }
+  .달력넘김 { width:30px; height:30px; border:1px solid var(--line); border-radius:7px; background:#fff; font-size:12px; color:var(--fg); }
+  .달력주 { display:flex; width:100%; gap:2px; border:0; background:none; padding:0; border-radius:7px; margin-top:2px; font-family:inherit; }
+  button.달력주.골라짐 { background:var(--soft); outline:1px solid var(--accent); }
+  .달력주이름 { flex:0 0 40px; font-size:11px; color:var(--accent); font-weight:600; align-self:center; text-align:left; padding-left:4px; }
+  .달력요일 { flex:1; text-align:center; font-size:11px; color:var(--muted); }
+  .달력날 { flex:1; height:32px; display:flex; align-items:center; justify-content:center; border:0; background:none; border-radius:7px; font-size:13px; color:var(--fg); padding:0; }
+  .달력날.딴달 { color:#bbb; }
+  .달력날.오늘 { font-weight:700; color:var(--accent); }
+  button.달력날.골라짐 { background:var(--accent); color:#fff; }
+  .달력칸들 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .달력큰칸 { display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 4px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--fg); }
+  .달력큰칸 small { font-size:11px; color:var(--muted); }
+  .달력큰칸.골라짐 { border-color:var(--accent); background:var(--soft); }
   .날짜 small { display:block; font-size:11px; font-weight:500; color:var(--muted); margin-top:1px; }
   .다른날 { margin-top:8px; padding:6px 10px; border-radius:8px; background:#fff4e0; color:var(--warn); font-size:12px; display:flex; justify-content:space-between; align-items:center; }
   .다른날 button { border:0; background:none; color:var(--accent); font-weight:600; font-size:12px; padding:0; }
@@ -39,6 +54,10 @@
   .참고 { margin-top:8px; background:var(--soft); border-radius:8px; padding:6px 10px; font-size:12px; color:#3d4a44; }
   .참고머리 { display:flex; gap:6px; align-items:center; border:0; background:none; padding:2px 0; width:100%; text-align:left; font-size:12px; color:var(--accent); font-weight:600; }
   .참고머리 span { color:var(--muted); font-weight:400; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .참고줄.평가줄 { border-radius:5px; padding:1px 4px; margin:1px 0; }
+  .참고줄.참고했다 { background:#e3ecf8; } .참고줄.참고했다 b { color:#3b73c4; font-weight:700; }
+  .참고줄.참고일부 { background:#faf0d4; } .참고줄.참고일부 b { color:#b98a12; font-weight:700; }
+  .참고줄.참고못했다 { background:#f8e1e0; } .참고줄.참고못했다 b { color:#d9534f; font-weight:700; }
   .참고머리 .참고제목 { margin:0; flex:none; }
   .참고머리 .접힘표 { color:var(--accent); flex:none; margin-left:-4px; }
   .참고 + .참고 { margin-top:6px; }
@@ -63,9 +82,9 @@
   .제목칸 { font-weight:600; }
   .상세칸 { background:var(--soft) !important; border-style:dashed !important; font-size:13px !important; }
   .상세글 { font-size:12px; color:#3d4a44; white-space:pre-wrap; line-height:1.5; margin:4px 0 0; padding:6px 8px; background:var(--soft); border-radius:6px; }
-  .이월단추 { border:1px solid var(--accent); background:#fff; color:var(--accent); border-radius:6px; font-size:11px; font-weight:600; padding:1px 7px; margin-left:6px; vertical-align:1px; }
-  .이월단추.됨 { border-color:var(--line); color:var(--muted); font-weight:400; }
-  .이월단추.모두이월 { display:block; margin:6px 0 2px auto; padding:4px 10px; font-size:12px; }
+  /* 이월 — 평가 단추 옆 네 번째 단추. 보낸 뒤엔 「이월됨」으로 흐리게 */
+  .평가들 button.이월단추 { width:auto; padding:0 6px; font-size:11px; font-weight:600; color:var(--accent); border-color:var(--accent); }
+  .평가들 button.이월단추.됨 { color:var(--muted); border-color:var(--line); font-weight:400; }
   .더보기 { border:0; background:none; color:var(--accent); font-size:11px; font-weight:600; padding:0; white-space:nowrap; }
   .참고 > .고정제목:not(:first-child) { margin-top:10px; }
   .참고주제 { display:flex; align-items:center; gap:5px; margin:6px 0 1px; font-weight:600; color:#3d4a44; }
@@ -744,7 +763,15 @@
 
   // 지금 보는 기간과, 그 화면이 참고로 띄울 상위 기간·지난 기간 (설계 6장 「참고」)
   // 상위.고정이 있으면 상위 계획을 영역 맨 위에 접지 않고 늘 보인다 (8k.1). 연간은 상위(로드맵)가 [6]까지 없다
-  function 지금보기() {
+  // 다음 기간 — 이월을 보낼 곳 (8k.22). 일간은 다음 날, 주간은 다음 주(재정비 주간 포함), 분기는 다음 분기, 연간은 다음 해
+  function 다음기간() {
+    if (단위 === '일') return { 단위:'일', 기간: 날짜글(하루뒤(보는날, 1)), 말: '다음 날' };
+    if (단위 === '주') return { 단위:'주', 기간: 주정보(하루뒤(보는날, 7)).기간, 말: '다음 주' };
+    if (단위 === '분기') { const n = 분기찾기(분기찾기(보는날).끝); return { 단위:'분기', 기간: n.연 + '-Q' + n.q, 말: '다음 분기' }; }
+    return { 단위:'연', 기간: String(분기찾기(보는날).연 + 1), 말: '다음 해' };
+  }
+  function 지금보기() { const v = 지금보기기본(); v.다음 = 다음기간(); return v; }
+  function 지금보기기본() {
     const 오늘 = 자정(new Date());
     if (단위 === '일') {
       const 주 = 주정보(보는날), 전날 = 하루뒤(보는날, -1);
@@ -841,6 +868,7 @@
       일기: 일기줄 ? 일.값(일기줄,'내용') : '',
       상위항목: 항목모으기(보기.상위.단위, 보기.상위.기간),
       지난항목: 항목모으기(보기.지난.단위, 보기.지난.기간),
+      다음항목: 보기.다음 ? 항목모으기(보기.다음.단위, 보기.다음.기간) : [],   // 이월했는지 알아보려고 (8k.22)
       지난피드백: 피드백모으기(보기.지난.단위, 보기.지난.기간)
     };
   }
@@ -967,19 +995,15 @@
     const 뒤 = 요소('button','넘김','▶'); 뒤.setAttribute('aria-label', 이름표[1]);
     const 가운데 = 요소('div','날짜', 보기.제목);
     if (보기.꼬리) 가운데.appendChild(요소('small', null, 보기.꼬리));
-    // 날짜를 누르면 달력 — 고른 날이 든 기간(그날 · 그 주 · 그 분기 · 그 해)으로 바로 간다 (사용자, 2026-10-14)
-    const 달력 = 요소('input','달력칸'); 달력.type = 'date'; 달력.value = 날짜글(보는날); 달력.setAttribute('aria-label','날짜 고르기');
-    달력.addEventListener('change', () => {
-      const m = 달력.value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (!m || !넘겨도되나()) { 달력.value = 날짜글(보는날); return; }
-      보는날 = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-      그리기();
-    });
-    가운데.appendChild(달력);
+    // 날짜를 누르면 그 단위의 달력이 펼쳐진다 — 일간은 날, 주간은 주(줄), 분기는 네 분기, 연간은 해 (사용자, 2026-10-14 · 10-17)
+    가운데.setAttribute('role','button'); 가운데.setAttribute('aria-label','달력 열기');
+    가운데.insertBefore(요소('span','달력표', 달력열림 ? ' ▴' : ' ▾'), 가운데.querySelector('small'));
+    가운데.addEventListener('click', () => { 달력열림 = !달력열림; 달력기준 = 보는날; 화면그리기(); });
     앞.addEventListener('click', () => 넘기기(-1));
     뒤.addEventListener('click', () => 넘기기(1));
     줄.append(앞, 가운데, 뒤);
     card.appendChild(줄);
+    if (달력열림) card.appendChild(달력판());
     if (!보기.지금인가) {
       const 알림줄 = 요소('div','다른날', 보기.과거 ? '지난 기록을 보고 있습니다' : '앞날의 기록을 보고 있습니다');
       const 오늘로 = 요소('button', null, { 일:'오늘로', 주:'이번 주로', 분기:'이번 분기로', 연:'올해로' }[단위]);
@@ -990,9 +1014,76 @@
     return card;
   }
 
+  // ── 달력 ── 기간을 골라 바로 간다. 고르면 닫힌다
+  let 달력열림 = false, 달력기준 = 자정(new Date());   // 달력기준: 달력이 보여 주는 달(일·주) 또는 해(분기·연)
+  function 달력가기(날) {
+    if (!넘겨도되나()) return;
+    보는날 = 자정(날); 달력열림 = false; 그리기();
+  }
+  function 달력판() {
+    const 판 = 요소('div','달력판');
+    const 머리 = 요소('div','달력머리');
+    const 앞 = 요소('button','달력넘김','◀'), 뒤 = 요소('button','달력넘김','▶');
+    const 월단위 = 단위 === '일' || 단위 === '주';
+    const 연 = 달력기준.getFullYear(), 월 = 달력기준.getMonth();
+    const 옮기기 = n => { 달력기준 = 월단위 ? new Date(연, 월 + n, 1) : new Date(연 + (단위 === '연' ? 5 : 1) * n, 0, 1); 화면그리기(); };
+    앞.addEventListener('click', () => 옮기기(-1)); 뒤.addEventListener('click', () => 옮기기(1));
+    머리.append(앞, 요소('span', null, 월단위 ? 연 + '년 ' + (월 + 1) + '월' : 단위 === '분기' ? 연 + '년' : (연 - 2) + ' ~ ' + (연 + 2) + '년'), 뒤);
+    판.appendChild(머리);
+    const 오늘 = 자정(new Date());
+    if (월단위) {
+      const 머리줄 = 요소('div','달력주');
+      if (단위 === '주') 머리줄.appendChild(요소('span','달력주이름'));
+      '월화수목금토일'.split('').forEach(d => 머리줄.appendChild(요소('span','달력요일', d)));
+      판.appendChild(머리줄);
+      let 월요 = 월요일(new Date(연, 월, 1));
+      const 보는주 = 단위 === '주' ? 주정보(보는날).기간 : null;
+      while (월요 <= new Date(연, 월 + 1, 0)) {
+        const 주 = 주정보(월요);
+        const 줄 = 요소(단위 === '주' ? 'button' : 'div', '달력주' + (단위 === '주' && 주.기간 === 보는주 ? ' 골라짐' : ''));
+        if (단위 === '주') {
+          const 끝 = 주.기간.split('-').pop();
+          줄.appendChild(요소('span','달력주이름', 끝[0] === 'R' ? '재정비' : Number(끝.slice(1)) + '주'));
+          const 그월요 = 월요; 줄.addEventListener('click', () => 달력가기(그월요));
+        }
+        for (let i = 0; i < 7; i++) {
+          const 날 = 하루뒤(월요, i);
+          const 칸 = 요소(단위 === '일' ? 'button' : 'span', '달력날' + (날.getMonth() !== 월 ? ' 딴달' : '') +
+            (날.getTime() === 오늘.getTime() ? ' 오늘' : '') + (단위 === '일' && 날.getTime() === 보는날.getTime() ? ' 골라짐' : ''), String(날.getDate()));
+          if (단위 === '일') 칸.addEventListener('click', () => 달력가기(날));
+          줄.appendChild(칸);
+        }
+        판.appendChild(줄);
+        월요 = 하루뒤(월요, 7);
+      }
+    } else if (단위 === '분기') {
+      const 칸들 = 요소('div','달력칸들');
+      const 보는분 = 분기찾기(보는날);
+      for (let q = 1; q <= 4; q++) {
+        const 시작 = 분기시작(연, q), 끝 = 하루뒤(q === 4 ? 분기시작(연 + 1, 1) : 분기시작(연, q + 1), -1);
+        const b = 요소('button','달력큰칸' + (보는분.연 === 연 && 보는분.q === q ? ' 골라짐' : ''));
+        b.append(요소('b', null, q + '분기'), 요소('small', null, 월일(시작) + ' ~ ' + 월일(끝)));
+        b.addEventListener('click', () => 달력가기(시작));
+        칸들.appendChild(b);
+      }
+      판.appendChild(칸들);
+    } else {
+      const 칸들 = 요소('div','달력칸들');
+      const 보는연 = 분기찾기(보는날).연;
+      for (let y = 연 - 2; y <= 연 + 2; y++) {
+        const b = 요소('button','달력큰칸' + (y === 보는연 ? ' 골라짐' : ''));
+        b.append(요소('b', null, y + '년'));
+        b.addEventListener('click', () => 달력가기(분기시작(y, 1)));
+        칸들.appendChild(b);
+      }
+      판.appendChild(칸들);
+    }
+    return 판;
+  }
+
   function 단위바꾸기(새단위) {
     if (단위 === 새단위 || !넘겨도되나()) return;
-    단위 = 새단위; 그리기(); window.scrollTo(0, 0);
+    단위 = 새단위; 달력열림 = false; 그리기(); window.scrollTo(0, 0);
   }
 
   function 넘겨도되나() {
@@ -1001,6 +1092,7 @@
     return true;
   }
   function 넘기기(n) {
+    달력열림 = false;
     if (!넘겨도되나()) return;
     if (n === 0) 보는날 = 자정(new Date());
     else if (단위 === '분기') { const 분 = 분기찾기(보는날); 보는날 = n < 0 ? 분기찾기(하루뒤(분.시작, -1)).시작 : 분.끝; }
@@ -1112,18 +1204,11 @@
     const 지난 = 자료.지난항목.filter(h => h.영역ID === 영역.id);
     const 지난피드백 = 자료.지난피드백[영역.id] || '';
     if (지난.length || 지난피드백) {
-      const 남은것 = 지난.filter(h => 이월대상(h) && !넘긴것(h));
-      const 요약 = [지난.length ? 평가요약(지난) : '', 지난피드백 ? '피드백 있음' : '', 남은것.length ? '이월할 것 ' + 남은것.length : '']
-        .filter(Boolean).join(' · ');
+      // 이월은 평가할 때 항목 줄에서 보낸다 — 참고는 보기만 (끌어오기는 걷음 — 8k.22)
+      const 요약 = [지난.length ? 평가요약(지난) : '', 지난피드백 ? '피드백 있음' : ''].filter(Boolean).join(' · ');
       묶음.appendChild(참고칸({ 열쇠: 열쇠앞 + '지난', 고정: 펼칠것 === '지난', 제목: 제목칸(보기.지난.이름, 펼칠것 === '지난'), 요약: ' ' + 요약,
         채우기: 틀 => {
-          주제별참고(틀, 지난, 분기형(보기), 이월단추(영역));
-          // 못 한 것 모두 이월 — 넘길 것이 둘 이상일 때. 평가를 하나도 안 한 기간에는 안 띄운다(한 일까지 넘어간다 — 8k.19)
-          if (남은것.length > 1 && 지난.some(h => h.평가)) {
-            const 모두 = 요소('button','이월단추 모두이월', '못 한 것 모두 이월 (' + 남은것.length + ') ›');
-            모두.addEventListener('click', () => 이월하기(남은것, 영역));
-            틀.appendChild(모두);
-          }
+          주제별참고(틀, 지난, 분기형(보기));
           if (지난피드백) 틀.appendChild(펼침글(지난피드백, '참고줄', '피드백: '));
         } }));
     }
@@ -1132,7 +1217,9 @@
 
   // 참고의 항목 한 줄 — 평가 기호 · 계획. 메모까지면 평가메모를 뒤에 붙인다 (분기·연간 — 8k.6)
   function 참고항목줄(h, 메모까지, 꾸미기) {
-    const 줄 = 요소('div','참고줄');
+    // 평가한 줄은 평가 색으로 — 무엇을 했고 못 했는지 한눈에 (사용자, 2026-10-17). 색은 평가 단추와 같다(○ 파랑 · △ 노랑 · ✕ 빨강)
+    const 평가색 = { '했다':'참고했다', '일부':'참고일부', '못했다':'참고못했다' }[h.평가];
+    const 줄 = 요소('div','참고줄' + (평가색 ? ' 평가줄 ' + 평가색 : ''));
     줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(제목만(h.계획)));
     if (꾸미기) 꾸미기(h, 줄);
     상세펼침(h, 줄, 줄);
@@ -1140,34 +1227,31 @@
     return 줄;
   }
 
-  // ── 이월 (설계 5-5 · 8k.19) ── 지난 기간의 못 한 항목을 지금 보는 기간으로 넘긴다.
-  // 원래 항목은 그대로 두고 새 항목을 만든다 — 같은 영역·주제·계획(제목+상세), 평가는 비우고, 이월횟수 +1
-  const 이월대상 = h => h.평가 !== '했다';
-  const 넘긴것 = h => 자료.항목들.some(x => x.영역ID === h.영역ID && 제목만(x.계획) === 제목만(h.계획) && x.이월 === h.이월 + 1);
-  function 이월하기(항목들, 영역) {
-    const 단 = 보기.단위, 간 = 보기.기간;
-    let 끝순서 = 자료.항목들.filter(x => x.영역ID === 영역.id).reduce((m, x) => Math.max(m, x.순서), 0);
-    const 새것들 = 항목들.filter(h => !넘긴것(h)).map(h => ({ id: 새번호표('it_'), 영역ID: 영역.id, 주제ID: h.주제ID, 주제사본: h.주제사본,
-      계획: h.계획, 평가: '', 평가메모: '', 이월: h.이월 + 1, 순서: ++끝순서 }));
-    if (!새것들.length) return;
-    자료.항목들.push(...새것들);
-    참고손접음.set(단 + ':' + 간 + ':' + 영역.id + ':지난', false);   // 넘긴 뒤에도 지난 기간은 펼친 채로 — 나머지도 보며 넘기게
+  // ── 이월 (설계 5-5 · 8k.22) ── 지금 보는 기간의 항목을 다음 기간으로 보낸다. 평가와 상관없이 모든 항목에서 —
+  // 했어도 다음에 또 해야 하는 것이 있다(사용자). 원래 항목은 그대로 두고 다음 기간에 새 항목 — 같은 영역·주제·계획(제목+상세),
+  // 평가는 비우고, 이월횟수 +1, 그 영역 맨 뒤 순서. 다음 기간에 같은 영역·같은 제목·이월횟수 +1인 항목이 있으면 「이월됨」
+  const 넘긴것 = h => 자료.다음항목.some(x => x.영역ID === h.영역ID && 제목만(x.계획) === 제목만(h.계획) && x.이월 === h.이월 + 1);
+  function 다음으로보내기(h, 영역) {
+    if (넘긴것(h)) return;
+    const 다음 = 보기.다음;
+    const 새것 = { id: 새번호표('it_'), 영역ID: 영역.id, 주제ID: h.주제ID, 주제사본: h.주제사본, 계획: h.계획, 평가: '', 평가메모: '',
+      이월: h.이월 + 1, 순서: 자료.다음항목.filter(x => x.영역ID === 영역.id).reduce((m, x) => Math.max(m, x.순서), 0) + 1 };
+    자료.다음항목.push(새것);
     화면그리기();
-    새것들.forEach(h => 저장하기(async () => {
+    저장하기(async () => {
       const t = (await 탭읽기(['계획항목']))['계획항목'];
-      await 행붙이기('계획항목', t, { '항목ID':h.id, '기간 단위':단, '기간':간, '영역ID':영역.id, '영역':영역.이름,
-        '주제ID':h.주제ID, '주제':h.주제사본, '계획':h.계획, '이월횟수':h.이월, '순서':h.순서, '수정시각':지금() });
-    }, () => '넘기려던 항목: ' + 제목만(h.계획)));
+      await 행붙이기('계획항목', t, { '항목ID':새것.id, '기간 단위':다음.단위, '기간':다음.기간, '영역ID':영역.id, '영역':영역.이름,
+        '주제ID':새것.주제ID, '주제':새것.주제사본, '계획':새것.계획, '이월횟수':새것.이월, '순서':새것.순서, '수정시각':지금() });
+    }, () => '보내려던 항목: ' + 제목만(h.계획));
   }
-  function 이월단추(영역) {
-    return (h, 줄) => {
-      if (!이월대상(h)) return;
-      const 됐나 = 넘긴것(h);
-      const b = 요소('button', '이월단추' + (됐나 ? ' 됨' : ''), 됐나 ? '이월됨' : '이월 ›');
-      b.disabled = 됐나;
-      b.addEventListener('click', ev => { ev.stopPropagation(); 이월하기([h], 영역); });
-      줄.appendChild(b);
-    };
+  function 이월단추(h, 영역) {
+    const 됐나 = 넘긴것(h);
+    const b = 요소('button', '이월단추' + (됐나 ? ' 됨' : ''), 됐나 ? '이월됨' : '이월');
+    b.title = 됐나 ? 보기.다음.말 + '로 보냈습니다' : 보기.다음.말 + '로 이월';
+    b.setAttribute('aria-label', b.title);
+    b.disabled = 됐나;
+    b.addEventListener('click', ev => { ev.stopPropagation(); 다음으로보내기(h, 영역); });
+    return b;
   }
 
   // 참고 목록도 계획 칸처럼 주제로 묶는다 — 주제 없는 항목은 제목 없이 맨 위, 그 아래 주제 순서대로 (사용자, 2026-10-11)
@@ -1346,6 +1430,15 @@
       메뉴.appendChild(요소('div','안내글','이름을 바꾸면 지난 기록의 주제 이름도 함께 바뀝니다.'));
       return 메뉴;
     }
+    if (펼친묶음.할일 === '색' && z) {
+      // 색 바꾸기 — 처음 색은 앱이 정해 주지만 언제든 바꾼다. 설정과 같은 색판, 모든 기간에 적용 (사용자, 2026-10-17)
+      메뉴.appendChild(요소('div','고르개제목', '「' + z.이름 + '」 색'));
+      const 판 = 색판(z, 닫기); 판.style.paddingLeft = '0';
+      메뉴.appendChild(판);
+      const 취소 = 요소('button','글자단추','취소'); 취소.addEventListener('click', 닫기);
+      메뉴.appendChild(취소);
+      return 메뉴;
+    }
     if (펼친묶음.할일 === '옮기기') {
       // 다른 주제로 옮기기 — 이 화면(이 날·이 주)의 이 묶음 항목만 옮긴다. 지난 기록은 그대로
       메뉴.appendChild(요소('div','고르개제목', '이 ' + 보기.이 + '의 항목 ' + 묶음항목들.length + '개를 옮길 주제'));
@@ -1377,7 +1470,9 @@
     if (z && !z.지움) {
       const 이름 = 요소('button','옅은단추','이름 바꾸기');
       이름.addEventListener('click', () => { 펼친묶음.할일 = '이름'; 화면그리기(); });
-      단추줄.appendChild(이름);
+      const 색 = 요소('button','옅은단추','색 바꾸기');
+      색.addEventListener('click', () => { 펼친묶음.할일 = '색'; 화면그리기(); });
+      단추줄.append(이름, 색);
     }
     const 옮김 = 요소('button','옅은단추','다른 주제로 옮기기');
     옮김.addEventListener('click', () => { 펼친묶음.할일 = '옮기기'; 화면그리기(); });
@@ -1572,6 +1667,7 @@
       });
       평가들.appendChild(b);
     });
+    평가들.appendChild(이월단추(h, 영역));   // 평가 단추 옆 — 평가하면서 다음 기간으로 보낸다 (8k.22)
     줄.append(글, 평가들);
     li.appendChild(줄);
     상세펼침(h, li, 글);
@@ -2064,14 +2160,14 @@
     return 틀;
   }
 
-  function 색판(z) {
+  function 색판(z, 끝) {   // 끝: 고른 뒤 할 일(회고 화면 제목 메뉴는 메뉴를 닫는다). 없으면 설정 화면의 고치기 틀을 닫는다
     const 판 = 요소('div','색판');
     색들.forEach(([이름, 색조]) => {
       const b = 요소('button', 색이름(z) === 이름 ? '골라짐' : null);
       const 점 = 요소('span','점'); 점.style.background = 색조;
       b.append(점, document.createTextNode(이름));
       b.addEventListener('click', () => {
-        z.색 = 이름; 편집(null);
+        z.색 = 이름; 끝 ? 끝() : 편집(null);
         저장하기(() => 고치기('주제설정', [{ 찾기:(행, v) => v(행,'주제ID') === z.id, 바꿀것:{ '색':이름, '수정시각':지금() } }]),
           null, '색:' + z.id);
       });
