@@ -346,7 +346,15 @@
     if (!요청 && 막힘 && 막힘.결과 === '확인필요') 다시확인(신분증);
   }
 
+  // 여는 데 어디서 시간이 드나 잰다 — 바로가기를 누른 때부터 단계마다 몇 초째인지. 설정 화면 맨 아래에 보인다
+  const 여는시간키 = 'pronote_여는시간', 여는시간 = [];
+  let 재는중 = true;   // 페이지를 처음 열 때만 잰다
+  function 시간재기(이름) { if (재는중) 여는시간.push(이름 + ' ' + (performance.now() / 1000).toFixed(1)); }
+  function 여는시간두기() { try { localStorage.setItem(여는시간키, 여는시간.join(' · ')); } catch (e) {} }
+  function 여는시간읽기() { try { return localStorage.getItem(여는시간키); } catch (e) { return null; } }
+
   function initGoogle() {
+    시간재기('구글 준비');
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID, scope: SCOPE,
       callback: resp => {
@@ -382,9 +390,10 @@
   async function 자동로그인() {
     알림('불러오는 중…','step');
     const 둔것 = 둔출입증();
-    if (둔것) { token = 둔것; await 준비(); return; }
+    if (둔것) { token = 둔것; 시간재기('로그인(둔 것)'); await 준비(); return; }
     try {
       await 출입증받기(true);
+      시간재기('로그인(새로)');
       await 준비();
     } catch (e) {
       // 조용히 안 되면 버튼을 보여준다 (처음 쓰는 사람, 또는 브라우저가 막은 경우)
@@ -418,6 +427,7 @@
       const q = encodeURIComponent("appProperties has { key='"+MARK_KEY+"' and value='"+MARK_VALUE+"' } and trashed = false");
       const r = await api('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id,name)');
       const 시트들 = r.files || [];
+      시간재기('시트 찾음');
       if (시트들.length > 1) { 알림('⚠ 기록 시트가 '+시트들.length+'개 있습니다. 하나만 있어야 해서 멈춥니다.','err'); return; }
       if (시트들.length === 1) 시트ID = 시트들[0].id;
       else if (!(await 처음대조(true))) return;   // 시트가 없는 사람은 승인 명단과 대조한 뒤에만 만든다 (3-3)
@@ -428,12 +438,18 @@
   }
 
   async function 시트열기() {
-    const 설정탭 = await 탭읽기(['주제설정','영역설정'], true);   // 켜질 때 맞출 두 탭을 한 번에 읽는다
-    await 주제설정맞추기(설정탭['주제설정']);
-    await 기본순서맞추기(설정탭['영역설정']);
+    // 켜질 때 맞출 두 탭과 첫 화면에 필요한 탭을 한 번에 읽는다 — 시트에 한 번만 다녀온다
+    const 탭이름들 = 모을탭들(지금보기());
+    let 읽은것 = await 탭읽기(탭이름들, true);
+    시간재기('기록 읽음');
+    const 고쳤나 = (await 주제설정맞추기(읽은것['주제설정'])) | (await 기본순서맞추기(읽은것['영역설정']));
+    // 고쳤거나 칸이 빠졌으면 다시 읽는다(빠진 칸은 그때 크게 알린다)
+    const 칸다있나 = 탭이름들.every(n => (필요칸[n] || []).every(c => c in 읽은것[n].자리));
+    if (고쳤나 || !칸다있나) 읽은것 = null;
     설정단추.style.display = '';
     알림('');
-    await 그리기();
+    await 그리기(true, 읽은것);
+    if (재는중) { 시간재기('화면'); 여는시간두기(); 재는중 = false; }
   }
 
   // ── 사용 승인: 승인 명단과 대조 (설계 3-3 · 개발결정로그 8j) ──
@@ -593,22 +609,25 @@
     const 새칸 = TABS.find(x => x[0] === '주제설정')[1];
     const 행있나 = t.행들.some(행 => 행.some(v => String(v).trim()));
     if (!행있나) {
-      if (t.머리.join('|') === 새칸.join('|')) return;
+      if (t.머리.join('|') === 새칸.join('|')) return false;
       const 줄 = 새칸.concat(new Array(Math.max(0, t.머리.length - 새칸.length)).fill(''));   // 남는 옛 칸은 비운다
       await 값쓰기("'주제설정'!A1", [줄]);
-      return;
+      return true;
     }
     const 없는칸 = 새칸.filter(n => !(n in t.자리));
-    if (없는칸.length) await 값쓰기("'주제설정'!" + 열글자(t.머리.length) + '1', [없는칸]);
+    if (!없는칸.length) return false;
+    await 값쓰기("'주제설정'!" + 열글자(t.머리.length) + '1', [없는칸]);
+    return true;
   }
 
   // v0.16.0 전에 만든 시트는 기본 영역이 실행 1 · 체질 2 · 핵심 목표 3이다. 기본 영역 세 줄의 순서만 고친다 (8k.3)
   async function 기본순서맞추기(t) {
-    if (!('영역ID' in t.자리) || !('순서' in t.자리)) return;   // 칸이 없으면 기록을 읽을 때 크게 알린다
+    if (!('영역ID' in t.자리) || !('순서' in t.자리)) return false;   // 칸이 없으면 기록을 읽을 때 크게 알린다
     const 틀린것 = Object.keys(기본순서).filter(id =>
       t.행들.some(행 => t.값(행,'영역ID') === id && t.값(행,'순서') !== String(기본순서[id])));
-    if (!틀린것.length) return;
+    if (!틀린것.length) return false;
     await 고치기('영역설정', 틀린것.map(id => ({ 모두:true, 찾기:(행, v) => v(행,'영역ID') === id, 바꿀것:{ '순서':기본순서[id] } })));
+    return true;
   }
 
   async function 값쓰기(범위, 값들) {
@@ -771,8 +790,10 @@
   const 분기형 = 보기 => 보기.단위 === '분기' || 보기.단위 === '연';   // 평가메모·핵심 문제가 있고 일기가 없는 회고
 
   // ── 그 기간의 기록을 모은다 (참고할 상위·지난 기간까지 한 번에 읽는다) ──
-  async function 모으기(보기) {
-    const 탭들 = await 탭읽기(['영역설정','주제설정','계획항목','피드백','일기'].concat(분기형(보기) ? ['핵심문제'] : []));
+  const 모을탭들 = 보기 => ['영역설정','주제설정','계획항목','피드백','일기'].concat(분기형(보기) ? ['핵심문제'] : []);
+  // 미리읽은: 켜질 때 이미 읽어 온 탭들(시트열기) — 있으면 다시 읽지 않는다
+  async function 모으기(보기, 미리읽은) {
+    const 탭들 = 미리읽은 || await 탭읽기(모을탭들(보기));
     const 영 = 탭들['영역설정'], 주 = 탭들['주제설정'], 계 = 탭들['계획항목'], 피 = 탭들['피드백'], 일 = 탭들['일기'];
     const 살아있나 = (t, 행) => !t.값(행, '삭제됨');
     const 그기간 = (t, 행, 단, 간) => t.값(행,'기간 단위') === 단 && t.값(행,'기간') === 간 && 살아있나(t, 행);
@@ -875,12 +896,12 @@
   function 설정열기() { if (!자료) return; 화면종류 = '설정'; 설정편집 = null; 화면그리기(); window.scrollTo(0, 0); }
   function 설정닫기() { 화면종류 = '회고'; 설정편집 = null; 화면그리기(); 그리기(); window.scrollTo(0, 0); }
 
-  async function 그리기(저장기다리기 = true) {
+  async function 그리기(저장기다리기 = true, 미리읽은) {
     if (저장기다리기) await 저장줄;
     const 볼것 = 지금보기();
     알림('불러오는 중…','step');
     let 읽은것;
-    try { 읽은것 = await 모으기(볼것); }
+    try { 읽은것 = await 모으기(볼것, 미리읽은); }
     catch (e) { 알림('기록을 불러오지 못했습니다.\n'+e.message,'err'); return; }
     const 현재 = 지금보기();
     if (현재.단위 !== 볼것.단위 || 현재.기간 !== 볼것.기간) return;   // 그사이 다른 기간으로 넘겼다
@@ -1814,6 +1835,8 @@
     닫기.addEventListener('click', 설정닫기);
     머리.appendChild(닫기);
     화면.append(머리, 영역설정카드(), 주제설정카드());
+    const 잰것 = 여는시간읽기();
+    if (잰것) 화면.appendChild(요소('div', '안내글', '지난번 여는 데 걸린 시간(누른 때부터, 초): ' + 잰것));
   }
 
   function 설정줄(이름, 곁) {
