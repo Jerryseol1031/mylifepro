@@ -60,6 +60,9 @@
   .제목칸 { font-weight:600; }
   .상세칸 { background:var(--soft) !important; border-style:dashed !important; font-size:13px !important; }
   .상세글 { font-size:12px; color:#3d4a44; white-space:pre-wrap; line-height:1.5; margin:4px 0 0; padding:6px 8px; background:var(--soft); border-radius:6px; }
+  .이월단추 { border:1px solid var(--accent); background:#fff; color:var(--accent); border-radius:6px; font-size:11px; font-weight:600; padding:1px 7px; margin-left:6px; vertical-align:1px; }
+  .이월단추.됨 { border-color:var(--line); color:var(--muted); font-weight:400; }
+  .이월단추.모두이월 { display:block; margin:6px 0 2px auto; padding:4px 10px; font-size:12px; }
   .더보기 { border:0; background:none; color:var(--accent); font-size:11px; font-weight:600; padding:0; white-space:nowrap; }
   .참고 > .고정제목:not(:first-child) { margin-top:10px; }
   .참고주제 { display:flex; align-items:center; gap:5px; margin:6px 0 1px; font-weight:600; color:#3d4a44; }
@@ -1067,16 +1070,48 @@
   }
 
   // 참고의 항목 한 줄 — 평가 기호 · 계획. 메모까지면 평가메모를 뒤에 붙인다 (분기·연간 — 8k.6)
-  function 참고항목줄(h, 메모까지) {
+  function 참고항목줄(h, 메모까지, 꾸미기) {
     const 줄 = 요소('div','참고줄');
     줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(제목만(h.계획)));
+    if (꾸미기) 꾸미기(h, 줄);
     상세펼침(h, 줄, 줄);
     if (메모까지 && h.평가메모) 줄.appendChild(펼침글(h.평가메모, '참고메모', '메모: '));
     return 줄;
   }
+
+  // ── 이월 (설계 5-5 · 8k.19) ── 지난 기간의 못 한 항목을 지금 보는 기간으로 넘긴다.
+  // 원래 항목은 그대로 두고 새 항목을 만든다 — 같은 영역·주제·계획(제목+상세), 평가는 비우고, 이월횟수 +1
+  const 이월대상 = h => h.평가 !== '했다';
+  const 넘긴것 = h => 자료.항목들.some(x => x.영역ID === h.영역ID && 제목만(x.계획) === 제목만(h.계획) && x.이월 === h.이월 + 1);
+  function 이월하기(항목들, 영역) {
+    const 단 = 보기.단위, 간 = 보기.기간;
+    let 끝순서 = 자료.항목들.filter(x => x.영역ID === 영역.id).reduce((m, x) => Math.max(m, x.순서), 0);
+    const 새것들 = 항목들.filter(h => !넘긴것(h)).map(h => ({ id: 새번호표('it_'), 영역ID: 영역.id, 주제ID: h.주제ID, 주제사본: h.주제사본,
+      계획: h.계획, 평가: '', 평가메모: '', 이월: h.이월 + 1, 순서: ++끝순서 }));
+    if (!새것들.length) return;
+    자료.항목들.push(...새것들);
+    참고손접음.set(단 + ':' + 간 + ':' + 영역.id, false);   // 넘긴 뒤에도 참고는 펼친 채로 — 나머지도 보며 넘기게
+    화면그리기();
+    새것들.forEach(h => 저장하기(async () => {
+      const t = (await 탭읽기(['계획항목']))['계획항목'];
+      await 행붙이기('계획항목', t, { '항목ID':h.id, '기간 단위':단, '기간':간, '영역ID':영역.id, '영역':영역.이름,
+        '주제ID':h.주제ID, '주제':h.주제사본, '계획':h.계획, '이월횟수':h.이월, '순서':h.순서, '수정시각':지금() });
+    }, () => '넘기려던 항목: ' + 제목만(h.계획)));
+  }
+  function 이월단추(영역) {
+    return (h, 줄) => {
+      if (!이월대상(h)) return;
+      const 됐나 = 넘긴것(h);
+      const b = 요소('button', '이월단추' + (됐나 ? ' 됨' : ''), 됐나 ? '이월됨' : '이월 ›');
+      b.disabled = 됐나;
+      b.addEventListener('click', ev => { ev.stopPropagation(); 이월하기([h], 영역); });
+      줄.appendChild(b);
+    };
+  }
+
   // 참고 목록도 계획 칸처럼 주제로 묶는다 — 주제 없는 항목은 제목 없이 맨 위, 그 아래 주제 순서대로 (사용자, 2026-10-11)
-  function 주제별참고(틀, 항목들, 메모까지) {
-    항목들.filter(h => !h.주제ID).forEach(h => 틀.appendChild(참고항목줄(h, 메모까지)));
+  function 주제별참고(틀, 항목들, 메모까지, 꾸미기) {
+    항목들.filter(h => !h.주제ID).forEach(h => 틀.appendChild(참고항목줄(h, 메모까지, 꾸미기)));
     const 차례 = [...new Set(항목들.map(h => h.주제ID).filter(Boolean))].sort((a, b) => {
       const za = 자료.주제맵.get(a), zb = 자료.주제맵.get(b);
       const 값 = z => !z ? [2, 0] : [z.빼둠 || z.지움 ? 1 : 0, z.순서];   // 목록에 있는 주제 → 빼 둔·지운 주제 → 설정에 없는 주제
@@ -1089,7 +1124,7 @@
       const 점 = 요소('span','점'); 점.style.background = 주제색(자료.주제맵.get(id));
       제목.append(점, document.createTextNode(주제이름(묶음[0])));
       틀.appendChild(제목);
-      묶음.forEach(h => { const 줄 = 참고항목줄(h, 메모까지); 줄.classList.add('묶인줄'); 틀.appendChild(줄); });
+      묶음.forEach(h => { const 줄 = 참고항목줄(h, 메모까지, 꾸미기); 줄.classList.add('묶인줄'); 틀.appendChild(줄); });
     });
   }
 
@@ -1116,13 +1151,20 @@
     머리.append(document.createTextNode(''), 요약칸);
     머리.addEventListener('click', () => { 접힘 = !접힘; 참고손접음.set(열쇠, 접힘); 그리머리(); });
 
-    const 목록 = (제목, 항목들) => {
+    const 목록 = (제목, 항목들, 꾸미기) => {
       몸.appendChild(요소('div','참고제목', 제목));
-      주제별참고(몸, 항목들, 분기형(보기));
+      주제별참고(몸, 항목들, 분기형(보기), 꾸미기);
     };
     if (상위.length) 목록(보기.상위.이름, 상위);
     if (지난.length || 지난피드백) {
-      목록(보기.지난.이름, 지난);
+      목록(보기.지난.이름, 지난, 이월단추(영역));
+      // 못 한 것 모두 이월 — 넘길 것이 둘 이상일 때. 평가를 하나도 안 한 기간에는 안 띄운다(한 일까지 넘어간다 — 8k.19)
+      const 남은것 = 지난.filter(h => 이월대상(h) && !넘긴것(h));
+      if (남은것.length > 1 && 지난.some(h => h.평가)) {
+        const 모두 = 요소('button','이월단추 모두이월', '못 한 것 모두 이월 (' + 남은것.length + ') ›');
+        모두.addEventListener('click', () => 이월하기(남은것, 영역));
+        몸.appendChild(모두);
+      }
       if (지난피드백) 몸.appendChild(펼침글(지난피드백, '참고줄', '피드백: '));
     }
     틀.append(머리, 몸);
