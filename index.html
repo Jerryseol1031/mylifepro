@@ -184,6 +184,13 @@
   .err .닫기 { display:block; margin:6px 0 0 auto; border:0; background:none; color:var(--accent); font-size:12px; font-weight:600; padding:0; }
   .step { color:var(--muted); }
   .ok { color:#fff; background:var(--accent) !important; }
+  /* 상단 고정바 — 내려 볼 때 지금 어느 기간·어느 영역인지. 누르면 맨 위로 */
+  #고정바 { position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:460px; z-index:5;
+    display:flex; gap:6px; align-items:center; padding:7px 14px; border:0; border-bottom:1px solid var(--line);
+    background:rgba(247,246,243,.96); font-family:inherit; font-size:12px; color:var(--fg); text-align:left; }
+  #고정바 b { font-weight:700; }
+  #고정바 .영역 { color:var(--accent); font-weight:700; }
+  #고정바 .위로 { margin-left:auto; color:var(--muted); font-size:11px; }
 </style>
 </head>
 <body>
@@ -191,6 +198,7 @@
   <header><h1>프로 노트</h1><span class="sub">나의 삶의 프로</span><button id="설정단추" style="display:none">설정</button></header>
   <button id="login" style="display:none">구글로 로그인</button>
   <div id="화면"></div>
+  <button id="고정바" style="display:none" aria-label="맨 위로"></button>
   <div id="msg"><div class="step">불러오는 중…</div></div>
 </main>
 
@@ -938,8 +946,28 @@
     알림('');
   }
 
+  // ── 상단 고정바 ── 날짜 칸이 위로 사라지면 나타나, 보고 있는 기간과 지금 화면 맨 위에 걸친 영역 이름을 보인다 (사용자, 2026-10-17)
+  const 고정바 = document.getElementById('고정바');
+  고정바.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  function 고정바살피기() {
+    const 날짜칸 = 화면종류 === '회고' && !막힘 ? 화면.querySelector('.날짜줄') : null;
+    if (!날짜칸 || !보기 || 날짜칸.getBoundingClientRect().bottom > 0) { 고정바.style.display = 'none'; return; }
+    let 지금영역 = '';
+    화면.querySelectorAll(':scope > .card').forEach(c => {
+      const 이름 = c.querySelector(':scope > .영역머리 .영역이름, :scope > .영역이름');
+      if (이름 && c.getBoundingClientRect().top <= 40) 지금영역 = 이름.textContent;
+    });
+    고정바.innerHTML = '';
+    고정바.append(요소('b', null, 보기.제목));
+    if (지금영역) 고정바.append(요소('span', null, '·'), 요소('span', '영역', 지금영역));
+    고정바.append(요소('span', '위로', '▲ 맨 위'));
+    고정바.style.display = '';
+  }
+  window.addEventListener('scroll', 고정바살피기, { passive: true });
+
   function 화면그리기() {
     화면.innerHTML = '';
+    setTimeout(고정바살피기, 0);
     if (막힘) { 설정단추.style.display = 'none'; 막힘그리기(); return; }
     설정단추.style.display = 화면종류 === '회고' ? '' : 'none';
     if (화면종류 === '설정') { 설정그리기(); return; }
@@ -1772,8 +1800,8 @@
     }
     줄.classList.add('고치기단추줄');
     // 지우기는 왼쪽 끝, 저장·취소는 오른쪽 — 늘 누르는 저장이 엄지 쪽에 (사용자, 2026-10-17)
-    저장.classList.add('오른쪽');
-    줄.append(지우기, 저장, 취소);
+    취소.classList.add('오른쪽');
+    줄.append(지우기, 취소, 저장);   // 저장이 맨 오른쪽 — 엄지에 가장 가깝게 (사용자, 2026-10-17)
     li.appendChild(줄);
     return li;
   }
