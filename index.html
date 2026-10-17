@@ -184,6 +184,21 @@
   .err .닫기 { display:block; margin:6px 0 0 auto; border:0; background:none; color:var(--accent); font-size:12px; font-weight:600; padding:0; }
   .step { color:var(--muted); }
   .ok { color:#fff; background:var(--accent) !important; }
+  /* 흐름 — 묶음 한 줄 = 이름 · 달성률 · 평가 색 점. 펼치면 영역별 항목 내용 */
+  .흐름카드 { padding:8px 12px; }
+  .흐름카드 > .참고 { margin-top:0; background:none; padding:0; }
+  .흐름묶음 { border-top:1px solid var(--line); }
+  .흐름묶음:first-child { border-top:0; }
+  .흐름머리 { display:flex; align-items:center; gap:8px; width:100%; border:0; background:none; padding:7px 2px; font-family:inherit; text-align:left; }
+  .흐름이름 { flex:0 0 auto; font-size:12px; font-weight:600; color:var(--fg); min-width:68px; }
+  .흐름묶음.지금 .흐름이름 { color:var(--accent); }
+  .흐름률 { flex:none; min-width:38px; white-space:nowrap; font-size:12px; font-weight:700; color:var(--accent); }
+  .흐름점들 { display:flex; flex-wrap:wrap; gap:3px; align-items:center; }
+  .흐름점 { width:9px; height:9px; border-radius:50%; background:#cfcfcf; }
+  .흐름점.점했다 { background:#3b73c4; } .흐름점.점일부 { background:#e0a920; } .흐름점.점못했다 { background:#d9534f; }
+  .흐름일기 { font-size:11px; color:var(--muted); margin-left:2px; }
+  .흐름몸 { padding:0 2px 8px; font-size:12px; }
+  .흐름영역 { font-size:11px; font-weight:700; color:var(--muted); margin:6px 0 2px; }
   /* 상단 고정바 — 내려 볼 때 지금 어느 기간·어느 영역인지. 누르면 맨 위로 */
   #고정바 { position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:460px; z-index:5;
     display:flex; gap:6px; align-items:center; padding:7px 14px; border:0; border-bottom:1px solid var(--line);
@@ -864,13 +879,24 @@
       return 결과;
     };
     const 일기줄 = 일.행들.find(행 => 그기간(일, 행, 보기.단위, 보기.기간));
+    // 흐름(8k.26)에 쓰려고 살아 있는 항목·일기를 기간별로 모아 둔다 — 이미 읽은 탭이라 시트를 더 읽지 않는다
+    const 기간별항목 = new Map(), 일기있음 = new Set();
+    계.행들.forEach(행 => {
+      if (!살아있나(계, 행)) return;
+      const 열쇠 = 계.값(행,'기간 단위') + '|' + 계.값(행,'기간');
+      if (!기간별항목.has(열쇠)) 기간별항목.set(열쇠, []);
+      기간별항목.get(열쇠).push({ id: 계.값(행,'항목ID'), 영역ID: 계.값(행,'영역ID'), 주제ID: 계.값(행,'주제ID'), 주제사본: 계.값(행,'주제'),
+        계획: 계.값(행,'계획'), 평가: 계.값(행,'평가'), 평가메모: 계.값(행,'평가메모'), 이월: Number(계.값(행,'이월횟수')) || 0, 순서: Number(계.값(행,'순서')) || 0 });
+    });
+    기간별항목.forEach(목록 => 목록.sort((a, b) => a.순서 - b.순서));
+    일.행들.forEach(행 => { if (살아있나(일, 행) && 일.값(행,'내용')) 일기있음.add(일.값(행,'기간 단위') + '|' + 일.값(행,'기간')); });
     // 핵심 문제는 기간 전체에 하나 (설계 5-9-1). 분기·연간만 읽는다
     const 핵 = 탭들['핵심문제'];
     const 핵심문제글 = (단, 간) => { if (!핵) return ''; const 행 = 핵.행들.find(행 => 그기간(핵, 행, 단, 간)); return 행 ? 핵.값(행,'내용') : ''; };
     return {
       핵심문제: 핵심문제글(보기.단위, 보기.기간),
       지난핵심문제: 핵심문제글(보기.지난.단위, 보기.지난.기간),
-      영역전체, 주제맵, 주제항목수,
+      영역전체, 주제맵, 주제항목수, 기간별항목, 일기있음,
       항목들: 항목모으기(보기.단위, 보기.기간),
       피드백: 피드백모으기(보기.단위, 보기.기간),
       일기: 일기줄 ? 일.값(일기줄,'내용') : '',
@@ -973,10 +999,94 @@
     if (화면종류 === '설정') { 설정그리기(); return; }
     화면.appendChild(날짜카드(보기));
     // 분기·연간: 지난 기간 핵심 문제(읽기 전용) → 영역들 → 이번 기간 핵심 문제. 일기는 없다 (8k.3 · 설계 5-9)
+    // 흐름 — 날짜 칸 바로 아래. 자기 단위 흐름 + 한 단계 아래 흐름 (8k.26)
+    ({ 일:['일'], 주:['일','주'], 분기:['주','분기'], 연:['분기'] })[보기.단위].forEach(종류 => 화면.appendChild(흐름카드(종류)));
     if (분기형(보기) && 자료.지난핵심문제) 화면.appendChild(지난핵심문제카드(자료.지난핵심문제, 보기));
     자료.영역전체.filter(영역 => 영역.기간[보기.단위]).forEach(영역 => 화면.appendChild(영역카드(영역, 자료, 보기)));
     화면.appendChild(분기형(보기) ? 핵심문제카드(자료.핵심문제, 보기) : 일기카드(자료.일기, 보기));
     if (다시초점) { const 칸 = 화면.querySelector('[data-추가="'+다시초점+'"]'); if (칸) 칸.focus({ preventScroll:true }); 다시초점 = null; }
+  }
+
+  // ── 흐름 (8k.26) ── 한 단위의 기록을 그 위 기간 안에서 모아 본다 — 진행 중에도 「잘 하고 있나」가 보이게 (사용자, 2026-10-17)
+  //   일간 흐름 = 보는 날이 든 주의 하루하루 · 주간 흐름 = 보는 기간이 든 분기의 주들 · 분기 흐름 = 그 해의 분기들
+  // 묶음마다 달성률과 평가 색 점, 펼치면 영역별 항목 내용(평가 색)과 일기 여부. 지금 기간의 묶음만 처음부터 펼친다.
+  // 평균 달성률은 평가한 기간만으로 낸다 — 기록을 안 한 기간은 통째로 뺀다(설계 6장)
+  const 흐름펼침 = new Map();   // 열쇠 → 펼침 (그 화면을 보는 동안만)
+  function 흐름묶음들(종류) {
+    if (종류 === '일') {
+      const 월 = 월요일(보는날);
+      return [0,1,2,3,4,5,6].map(i => { const d = 하루뒤(월, i);
+        return { 단위:'일', 기간: 날짜글(d), 이름: '월화수목금토일'[i] + ' ' + 월일(d), 날: d }; });
+    }
+    if (종류 === '주') {
+      const 분 = 분기찾기(보는날), 목록 = [];
+      for (let d = 분.시작; d < 분.끝; d = 하루뒤(d, 7)) {
+        const 주 = 주정보(d), 끝 = 주.기간.split('-').pop();
+        목록.push({ 단위:'주', 기간: 주.기간, 이름: (끝[0] === 'R' ? '재정비 ' + 끝.slice(1) : Number(끝.slice(1)) + '주') + ' ' + 월일(d), 날: d });
+      }
+      if (목록.filter(m => m.이름.startsWith('재정비')).length === 1) 목록.forEach(m => { m.이름 = m.이름.replace('재정비 1 ', '재정비 '); });   // 하나뿐이면 번호를 안 붙인다
+      return 목록;
+    }
+    const 연 = 분기찾기(보는날).연;
+    return [1,2,3,4].map(q => ({ 단위:'분기', 기간: 연 + '-Q' + q, 이름: q + '분기', 날: 분기시작(연, q) }));
+  }
+  function 흐름카드(종류) {
+    const 이름 = { 일:'일간 흐름', 주:'주간 흐름', 분기:'분기 흐름' }[종류];
+    const 묶음들 = 흐름묶음들(종류).map(m => {
+      const 보는기간 = m.단위 === 보기.단위 && m.기간 === 보기.기간;   // 지금 화면에서 고친 것까지 바로 보이게 화면의 자료를 쓴다
+      const 항목들 = (보는기간 ? 자료.항목들 : 자료.기간별항목.get(m.단위 + '|' + m.기간) || []).filter(h => {
+        const 영 = 자료.영역전체.find(a => a.id === h.영역ID); return 영 && 영.기간[m.단위];
+      });
+      const 일기 = 보는기간 ? !!자료.일기 : 자료.일기있음.has(m.단위 + '|' + m.기간);
+      return Object.assign(m, { 항목들, 일기, 률: 달성률(항목들) });
+    });
+    const 오늘 = 자정(new Date());
+    const 지금묶음 = 묶음들.find(m => m.단위 === 보기.단위 && m.기간 === 보기.기간) ||
+      묶음들.find(m => m.단위 === '일' ? m.날.getTime() === 오늘.getTime() : m.단위 === '주' ? 주정보(오늘).기간 === m.기간 : 분기찾기(오늘).연 + '-Q' + 분기찾기(오늘).q === m.기간);
+    const 기록한 = 묶음들.filter(m => m.항목들.length || m.일기);
+    const 률들 = 묶음들.map(m => m.률).filter(r => r != null);
+    const 단위말 = 종류 === '일' ? '일' : 종류 === '주' ? '주' : '분기';
+    const 요약 = ' ' + 묶음들.length + 단위말 + ' 중 ' + 기록한.length + 단위말 + ' 기록' +
+      (률들.length ? ' · 평균 ' + Math.round(률들.reduce((s, r) => s + r, 0) / 률들.length) + '%' : '');
+    const card = 요소('div','card 흐름카드');
+    card.appendChild(참고칸({ 열쇠: '흐름:' + 종류 + ':' + 보기.단위, 고정: false, 제목: 요소('div','참고제목', 이름), 요약,
+      채우기: 틀 => 묶음들.forEach(m => 틀.appendChild(흐름묶음(m, m === 지금묶음))) }));
+    return card;
+  }
+  function 흐름묶음(m, 지금) {
+    const 틀 = 요소('div','흐름묶음' + (지금 ? ' 지금' : ''));
+    const 열쇠 = '흐름묶음:' + m.단위 + ':' + m.기간;
+    let 펼침 = 흐름펼침.has(열쇠) ? 흐름펼침.get(열쇠) : 지금;
+    const 머리 = 요소('button','흐름머리');
+    머리.append(요소('span','흐름이름', m.이름 + (지금 ? ' ·지금' : '')),
+      요소('span','흐름률', m.률 != null ? m.률 + '%' : (m.항목들.length || m.일기 ? '' : '기록 없음')));
+    const 점들 = 요소('span','흐름점들');
+    m.항목들.forEach(h => { const 점 = 요소('span','흐름점 ' + ({ '했다':'점했다', '일부':'점일부', '못했다':'점못했다' }[h.평가] || '점전')); 점들.appendChild(점); });
+    if (m.일기) 점들.appendChild(요소('span','흐름일기','✎'));
+    머리.appendChild(점들);
+    const 몸 = 요소('div','흐름몸');
+    const 채우기 = () => {
+      몸.innerHTML = '';
+      자료.영역전체.filter(a => a.기간[m.단위]).forEach(영역 => {
+        const 그영역 = m.항목들.filter(h => h.영역ID === 영역.id);
+        if (!그영역.length) return;
+        몸.appendChild(요소('div','흐름영역', 영역.이름));
+        그영역.forEach(h => 몸.appendChild(참고항목줄(h, m.단위 !== '일' && m.단위 !== '주')));
+      });
+      if (m.일기) 몸.appendChild(요소('div','흐름영역','✎ 일기 있음'));
+      if (!m.항목들.length && !m.일기) 몸.appendChild(요소('div','참고줄','기록 없음'));
+      if (!지금 || m.단위 !== 보기.단위) {
+        const 가기 = 요소('button','글자단추', { 일:'그날로 ›', 주:'그 주로 ›', 분기:'그 분기로 ›' }[m.단위]);
+        가기.style.cssText = 'display:block;margin-left:auto;padding:4px 0 0;';
+        가기.addEventListener('click', () => { if (!넘겨도되나()) return; 단위 = m.단위; 보는날 = m.날; 달력열림 = false; 그리기(); window.scrollTo(0, 0); });
+        몸.appendChild(가기);
+      }
+    };
+    const 그리 = () => { 몸.style.display = 펼침 ? '' : 'none'; if (펼침 && !몸.childNodes.length) 채우기(); };
+    머리.addEventListener('click', () => { 펼침 = !펼침; 흐름펼침.set(열쇠, 펼침); 그리(); });
+    틀.append(머리, 몸);
+    그리();
+    return 틀;
   }
 
   // 저장은 한 줄로 세워 차례로 한다 (빨리 여러 번 눌러도 순서가 섞이지 않게).
