@@ -184,25 +184,28 @@
   .err .닫기 { display:block; margin:6px 0 0 auto; border:0; background:none; color:var(--accent); font-size:12px; font-weight:600; padding:0; }
   .step { color:var(--muted); }
   .ok { color:#fff; background:var(--accent) !important; }
-  /* 흐름 — 묶음 한 줄 = 이름 · 달성률 · 평가 색 점. 펼치면 영역별 항목 내용 */
+  /* 흐름 — 묶음 한 줄 = 이름 · 달성률 · 영역별·주제별 평가 도형. 줄을 누르면 그 기간 내용 */
   .흐름카드 { padding:8px 12px; }
   .흐름카드 > .참고 { margin-top:0; background:none; padding:0; }
-  .흐름묶음 { border-top:1px solid var(--line); }
-  .흐름묶음:first-child { border-top:0; }
-  .흐름표 { overflow-x:auto; }
-  .흐름표머리 { display:grid; gap:4px; align-items:end; padding:4px 2px; font-size:10px; color:var(--muted); font-weight:600; border-bottom:1px solid var(--line); min-width:max-content; }
-  .흐름주제 { display:flex; align-items:center; gap:3px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-  .흐름주제 .점 { width:7px; height:7px; flex:none; }
-  .흐름표 .흐름묶음 { min-width:max-content; }
-  .흐름머리 { display:grid; gap:4px; align-items:center; width:100%; border:0; background:none; padding:7px 2px; font-family:inherit; text-align:left; }
-  .흐름이름 { font-size:12px; font-weight:600; color:var(--fg); white-space:nowrap; }
-  .흐름묶음.지금 .흐름이름 { color:var(--accent); }
-  .흐름률 { flex:none; min-width:38px; white-space:nowrap; font-size:12px; font-weight:700; color:var(--accent); }
-  .흐름점들 { display:flex; flex-wrap:wrap; gap:3px; align-items:center; }
-  .흐름점 { width:9px; height:9px; border-radius:50%; background:#cfcfcf; }
-  .흐름점.점했다 { background:#3b73c4; } .흐름점.점일부 { background:#e0a920; } .흐름점.점못했다 { background:#d9534f; }
-  .흐름일기 { font-size:11px; color:var(--muted); margin-left:2px; }
-  .흐름몸 { padding:0 2px 8px; font-size:12px; }
+  /* 흐름표 — 진짜 표. 영역 경계는 진한 세로선, 칸 사이·줄 사이는 옅은 선. 평가는 도형, 주제 색은 머리 점에만 */
+  .흐름표틀 { overflow-x:auto; margin:0 -2px; }
+  table.흐름표 { border-collapse:collapse; width:100%; font-size:12px; }
+  .흐름표 th, .흐름표 td { border-bottom:1px solid var(--line); padding:5px 4px; text-align:center; white-space:nowrap; }
+  .흐름표 th { font-size:10px; font-weight:600; color:var(--muted); vertical-align:bottom; }
+  .흐름표 th.흐름영역머리 { color:var(--accent); font-size:11px; font-weight:700; border-bottom:1px solid var(--line); }
+  .흐름표 .영역첫칸 { border-left:1.5px solid #c9c6bf; }
+  .흐름표 td.흐름도형칸 + td.흐름도형칸:not(.영역첫칸), .흐름표 th.흐름주제 + th.흐름주제:not(.영역첫칸) { border-left:1px dotted var(--line); }
+  .흐름표 .흐름기간칸 { text-align:left; font-weight:600; min-width:64px; }
+  .흐름표 .흐름률칸 { color:var(--accent); font-weight:700; min-width:36px; }
+  .흐름표 th.흐름주제 .점 { display:inline-block; width:7px; height:7px; margin-right:3px; vertical-align:0; }
+  .흐름표 th.흐름주제 { max-width:64px; overflow:hidden; text-overflow:ellipsis; }
+  .흐름표 tr.흐름줄 { cursor:pointer; }
+  .흐름표 tr.흐름줄.지금 td { background:var(--soft); }
+  .흐름표 tr.흐름줄.지금 .흐름기간칸 { color:var(--accent); }
+  .흐름도형 { font-size:13px; font-weight:700; margin:0 1px; }
+  .도형했다 { color:#2f5fa8; } .도형일부 { color:#a87b00; } .도형못했다 { color:#b8423c; } .도형전 { color:#b5b5b5; }
+  .흐름표 .흐름일기칸 { color:var(--muted); width:16px; }
+  .흐름표 tr.흐름내용줄 td { text-align:left; white-space:normal; background:#fff; padding:4px 8px 8px; }
   .흐름영역 { font-size:11px; font-weight:700; color:var(--muted); margin:6px 0 2px; }
   /* 상단 고정바 — 내려 볼 때 지금 어느 기간·어느 영역인지. 누르면 맨 위로 */
   #고정바 { position:fixed; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:460px; z-index:5;
@@ -1056,44 +1059,64 @@
     const card = 요소('div','card 흐름카드');
     card.appendChild(참고칸({ 열쇠: '흐름:' + 종류 + ':' + 보기.단위, 고정: false, 제목: 요소('div','참고제목', 이름), 요약,
       채우기: 틀 => {
-        // 주제를 열로 — 이 흐름에 나온 주제만, 구분(목표·실행 → 체질 → 커스텀)과 주제 순서대로. 주제 없는 항목은 맨 끝 「기타」 (사용자, 2026-10-17)
-        const 구분차례 = 구 => 구 === '목표·실행' ? 0 : 구 === '체질' ? 1 : 2;
-        const 주제들 = [...new Set([].concat(...묶음들.map(m => m.항목들.map(h => h.주제ID))))].filter(Boolean).sort((a, b) => {
-          const za = 자료.주제맵.get(a), zb = 자료.주제맵.get(b);
-          return (za ? 구분차례(za.구분) : 3) - (zb ? 구분차례(zb.구분) : 3) || ((za && za.순서) || 0) - ((zb && zb.순서) || 0);
+        // 표 — 머리 두 줄: 영역(실행 초점 · 체질 초점 …) 아래에 그 영역에 나온 주제(주제 순서, 주제 없는 항목은 「기타」).
+        // 칸에는 평가를 도형으로(○ 했다 · △ 일부 · ✕ 못했다 · · 평가 전) — 주제 색은 머리의 점에만 쓴다 (사용자, 2026-10-17)
+        const 열들 = [];   // { 영역, 주제ID }
+        const 영역들 = 자료.영역전체.filter(a => a.기간[묶음들[0].단위]).map(영역 => {
+          const 그영역 = [].concat(...묶음들.map(m => m.항목들.filter(h => h.영역ID === 영역.id)));
+          if (!그영역.length) return null;
+          const 주제들 = [...new Set(그영역.map(h => h.주제ID).filter(Boolean))].sort((a, b) =>
+            (((자료.주제맵.get(a) || {}).순서) || 99) - (((자료.주제맵.get(b) || {}).순서) || 99));
+          if (그영역.some(h => !h.주제ID)) 주제들.push('');
+          주제들.forEach(id => 열들.push({ 영역, 주제ID: id }));
+          return { 영역, 수: 주제들.length };
+        }).filter(Boolean);
+        const 표 = 요소('table','흐름표');
+        const 머리 = 요소('thead');
+        const 줄1 = 요소('tr'), 줄2 = 요소('tr');
+        const 칸 = (태그, cls, 글, 넓이) => { const c = 요소(태그, cls, 글); if (넓이) c.colSpan = 넓이; return c; };
+        줄1.append(칸('th','흐름기간칸', '', 0), 칸('th','흐름률칸', '달성', 0));
+        줄1.children[0].rowSpan = 2; 줄1.children[1].rowSpan = 2;
+        영역들.forEach(({ 영역, 수 }) => 줄1.appendChild(칸('th','흐름영역머리 영역첫칸', 영역.이름, 수)));
+        줄1.appendChild(칸('th','흐름일기칸','✎', 0)); 줄1.lastChild.rowSpan = 2;
+        let 앞영역 = null;
+        열들.forEach(({ 영역, 주제ID }) => {
+          const th = 요소('th','흐름주제' + (영역 !== 앞영역 ? ' 영역첫칸' : '')); 앞영역 = 영역;
+          const z = 자료.주제맵.get(주제ID);
+          if (주제ID) { const 점 = 요소('span','점'); 점.style.background = 주제색(z); th.appendChild(점); }
+          const 사본 = 주제ID && ([].concat(...묶음들.map(m => m.항목들)).find(h => h.주제ID === 주제ID) || {}).주제사본;
+          const 글 = 주제ID ? (z ? z.이름 : 사본 || '(지운 주제)') : '기타';
+          th.appendChild(document.createTextNode(글)); th.title = 글;
+          줄2.appendChild(th);
         });
-        if (묶음들.some(m => m.항목들.some(h => !h.주제ID))) 주제들.push('');
-        const 열틀 = '72px 40px' + (주제들.length ? ' repeat(' + 주제들.length + ', minmax(34px, 1fr))' : ' 1fr') + ' 16px';
-        const 표 = 요소('div','흐름표');
-        const 머리줄 = 요소('div','흐름표머리'); 머리줄.style.gridTemplateColumns = 열틀;
-        머리줄.append(요소('span'), 요소('span', null, '달성'));
-        주제들.forEach(id => {
-          const z = 자료.주제맵.get(id);
-          const 칸 = 요소('span','흐름주제');
-          if (id) { const 점 = 요소('span','점'); 점.style.background = 주제색(z); 칸.appendChild(점); }
-          const 글 = id ? (z ? z.이름 : (묶음들.map(m => m.항목들.find(h => h.주제ID === id)).find(Boolean) || {}).주제사본 || '') : '기타';
-          칸.appendChild(document.createTextNode(글)); 칸.title = 글;
-          머리줄.appendChild(칸);
-        });
-        머리줄.appendChild(요소('span'));
-        표.appendChild(머리줄);
-        묶음들.forEach(m => 표.appendChild(흐름묶음(m, m === 지금묶음, 주제들, 열틀)));
-        틀.appendChild(표);
+        머리.append(줄1, 줄2);
+        const 몸 = 요소('tbody');
+        묶음들.forEach(m => 흐름묶음(m, m === 지금묶음, 열들).forEach(줄 => 몸.appendChild(줄)));
+        표.append(머리, 몸);
+        const 감싸기 = 요소('div','흐름표틀'); 감싸기.appendChild(표);
+        틀.appendChild(감싸기);
       } }));
     return card;
   }
-  function 흐름묶음(m, 지금, 주제들, 열틀) {
-    const 틀 = 요소('div','흐름묶음' + (지금 ? ' 지금' : ''));
+  const 평가도형 = h => ({ '했다':['○','도형했다'], '일부':['△','도형일부'], '못했다':['✕','도형못했다'] }[h.평가] || ['·','도형전']);
+  function 흐름묶음(m, 지금, 열들) {
     const 열쇠 = '흐름묶음:' + m.단위 + ':' + m.기간;
     let 펼침 = 흐름펼침.has(열쇠) ? 흐름펼침.get(열쇠) : 지금;
-    const 머리 = 요소('button','흐름머리'); 머리.style.gridTemplateColumns = 열틀;
-    머리.append(요소('span','흐름이름', m.이름 + (지금 ? ' ·지금' : '')),
-      요소('span','흐름률', m.률 != null ? m.률 + '%' : (m.항목들.length || m.일기 ? '' : '기록 없음')));
-    const 점찍기 = (칸, 항목들) => 항목들.forEach(h => 칸.appendChild(요소('span','흐름점 ' + ({ '했다':'점했다', '일부':'점일부', '못했다':'점못했다' }[h.평가] || '점전'))));
-    if (주제들.length) 주제들.forEach(id => { const 칸 = 요소('span','흐름점들'); 점찍기(칸, m.항목들.filter(h => (h.주제ID || '') === id)); 머리.appendChild(칸); });
-    else { const 칸 = 요소('span','흐름점들'); 점찍기(칸, m.항목들); 머리.appendChild(칸); }
-    머리.appendChild(요소('span','흐름일기', m.일기 ? '✎' : ''));
-    const 몸 = 요소('div','흐름몸');
+    const 머리 = 요소('tr','흐름줄' + (지금 ? ' 지금' : ''));
+    머리.append(요소('td','흐름기간칸', m.이름 + (지금 ? ' ·지금' : '')),
+      요소('td','흐름률칸', m.률 != null ? m.률 + '%' : (m.항목들.length || m.일기 ? '' : '–')));
+    let 앞영역 = null;
+    열들.forEach(({ 영역, 주제ID }) => {
+      const td = 요소('td','흐름도형칸' + (영역 !== 앞영역 ? ' 영역첫칸' : '')); 앞영역 = 영역;
+      m.항목들.filter(h => h.영역ID === 영역.id && (h.주제ID || '') === 주제ID).forEach(h => {
+        const [글, cls] = 평가도형(h); td.appendChild(요소('span', '흐름도형 ' + cls, 글));
+      });
+      머리.appendChild(td);
+    });
+    머리.appendChild(요소('td','흐름일기칸', m.일기 ? '✎' : ''));
+    const 내용줄 = 요소('tr','흐름내용줄');
+    const 몸 = 요소('td'); 몸.colSpan = 열들.length + 3;
+    내용줄.appendChild(몸);
     const 채우기 = () => {
       몸.innerHTML = '';
       자료.영역전체.filter(a => a.기간[m.단위]).forEach(영역 => {
@@ -1111,11 +1134,10 @@
         몸.appendChild(가기);
       }
     };
-    const 그리 = () => { 몸.style.display = 펼침 ? '' : 'none'; if (펼침 && !몸.childNodes.length) 채우기(); };
+    const 그리 = () => { 내용줄.style.display = 펼침 ? '' : 'none'; if (펼침 && !몸.childNodes.length) 채우기(); };
     머리.addEventListener('click', () => { 펼침 = !펼침; 흐름펼침.set(열쇠, 펼침); 그리(); });
-    틀.append(머리, 몸);
     그리();
-    return 틀;
+    return [머리, 내용줄];
   }
 
   // 저장은 한 줄로 세워 차례로 한다 (빨리 여러 번 눌러도 순서가 섞이지 않게).
