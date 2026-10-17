@@ -112,7 +112,16 @@
   .설정머리 { display:flex; justify-content:space-between; align-items:center; }
   .설정머리 h2 { font-size:17px; margin:0; }
   .닫기단추 { width:34px; height:34px; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:15px; color:var(--fg); }
-  #설정단추 { float:right; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:13px; padding:5px 10px; color:var(--fg); }
+  #설정단추, #로드맵단추 { float:right; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:13px; padding:5px 10px; color:var(--fg); }
+  #로드맵단추 { margin-right:6px; }
+  /* 로드맵 화면 */
+  .로드맵칸 { margin-top:4px; }
+  .로드맵칸 .칸제목 small { font-size:11px; font-weight:600; color:var(--muted); letter-spacing:0; margin-left:6px; margin-right:auto; }
+  .로드맵칸 .칸제목 small.필요 { color:var(--warn); }
+  .로드맵칸 .참고 { margin-top:6px; }
+  .생년줄 { display:flex; align-items:center; gap:6px; margin-top:8px; font-size:12px; color:var(--muted); }
+  .생년줄 input[type=text] { flex:0 0 96px; padding:6px 8px; font-size:13px; }
+  .생년줄 .작은단추 { min-height:32px; padding:0 10px; font-size:13px; }
   .묶음제목 { font-size:12px; font-weight:700; color:var(--muted); margin:14px 0 2px; }
   .묶음제목:first-of-type { margin-top:8px; }
   .설정줄 { display:flex; align-items:center; gap:6px; padding:7px 0; border-bottom:1px solid var(--line); min-height:40px; }
@@ -200,8 +209,11 @@
   .흐름표 tr.흐름내용줄 td .흐름내용 { position:sticky; left:0; width:calc(min(100vw, 460px) - 60px); }
   .흐름넘김줄 { display:flex; align-items:center; gap:8px; margin:4px 0 6px; }
   .흐름넘김이름 { flex:1; text-align:center; font-size:12px; font-weight:600; color:var(--fg); }
-  .흐름거름줄 { font-size:12px; color:var(--accent); font-weight:600; margin:0 0 4px; }
-  .흐름넘김이름 .더보기, .흐름거름줄 .더보기 { margin-left:6px; }
+  .흐름거름줄 { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:12px; color:var(--accent); font-weight:600; margin:0 0 6px; }
+  .흐름넘김이름 .더보기 { margin-left:6px; }
+  /* 주제 하나만 볼 때 — 칸에 항목 글까지 */
+  .흐름표.글표 td.흐름도형칸 { text-align:left; white-space:normal; font-size:12px; }
+  .흐름표.글표 td.흐름도형칸 .참고줄 { word-break:break-word; }
   .흐름표 th.흐름주제 { cursor:pointer; }
   .흐름표 th.흐름주제.걸림 { color:var(--accent); }
   .흐름표 th.흐름주제 .점 { display:inline-block; width:7px; height:7px; margin-right:3px; vertical-align:0; }
@@ -225,7 +237,7 @@
 </head>
 <body>
 <main>
-  <header><h1>프로 노트</h1><span class="sub">나의 삶의 프로</span><button id="설정단추" style="display:none">설정</button></header>
+  <header><h1>프로 노트</h1><span class="sub">나의 삶의 프로</span><button id="설정단추" style="display:none">설정</button><button id="로드맵단추" style="display:none">로드맵</button></header>
   <button id="login" style="display:none">구글로 로그인</button>
   <div id="화면"></div>
   <button id="고정바" style="display:none" aria-label="맨 위로"></button>
@@ -245,7 +257,7 @@
   const 계정키 = 'pronote_계정';   // 기록 계정 이메일. 구글에 「이 계정으로」라고 알려 계정 선택 화면이 안 뜨게 한다
 
   const TABS = [
-    ['로드맵',   ['연도','비전','미션','꿈꾸는 삶의 모습','3년 후','1년 후','수정시각']],
+    ['로드맵',   ['연도','생년','비전','미션','꿈꾸는 삶의 모습','3년 후','1년 후','수정시각']],
     ['피드백',   ['피드백ID','기간 단위','기간','영역ID','영역','피드백','수정시각','삭제됨']],
     ['계획항목', ['항목ID','기간 단위','기간','영역ID','영역','주제ID','주제','계획','평가','평가메모','이월횟수','순서','수정시각','삭제됨']],
     ['일기',     ['일기ID','기간 단위','기간','내용','수정시각','삭제됨']],
@@ -269,8 +281,17 @@
     '계획항목': ['항목ID','기간 단위','기간','영역ID','영역','주제ID','주제','계획','평가','평가메모','이월횟수','순서','수정시각','삭제됨'],
     '피드백':   ['피드백ID','기간 단위','기간','영역ID','영역','피드백','수정시각','삭제됨'],
     '일기':     ['일기ID','기간 단위','기간','내용','수정시각','삭제됨'],
-    '핵심문제': ['핵심문제ID','기간 단위','기간','내용','수정시각','삭제됨']
+    '핵심문제': ['핵심문제ID','기간 단위','기간','내용','수정시각','삭제됨'],
+    '로드맵':   ['연도','생년','비전','미션','꿈꾸는 삶의 모습','3년 후','1년 후','수정시각']
   };
+  // 로드맵의 글 칸 (설계 5-3) — [칸 이름, 묶음, 안내, 몇 년 뒤(나이를 붙일 칸)]. 묶음은 삶의 목적 · 이정표 (개념 1h.1 · 이정표는 2026-10-17)
+  const 로드맵칸들 = [
+    ['비전', '삶의 목적', '가장 큰 가치와 삶 — 한 문장'],
+    ['미션', '삶의 목적', '무엇을 하며 비전에 닿나 — 방법·접근(직업명 아님)'],
+    ['꿈꾸는 삶의 모습', '이정표', '비전·미션을 이룬 삶을 기한 없이 그려 본 모습'],
+    ['3년 후', '이정표', '열심히 살았을 때 3년 후의 모습', 3],
+    ['1년 후', '이정표', '3년 후가 되려면 1년 후엔 이쯤', 1]
+  ];
   // 시트에는 한글로, 화면에는 기호로 (설계 5-5)
   const 평가모양 = [['했다','○'],['일부','△'],['못했다','✕']];
   const 평가점수 = { '했다':1, '일부':0.5, '못했다':0 };
@@ -499,11 +520,11 @@
     const 탭이름들 = 모을탭들(지금보기());
     let 읽은것 = await 탭읽기(탭이름들, true);
     시간재기('기록 읽음');
-    const 고쳤나 = (await 주제설정맞추기(읽은것['주제설정'])) | (await 기본순서맞추기(읽은것['영역설정']));
+    const 고쳤나 = (await 주제설정맞추기(읽은것['주제설정'])) | (await 기본순서맞추기(읽은것['영역설정'])) | (await 로드맵맞추기(읽은것['로드맵']));
     // 고쳤거나 칸이 빠졌으면 다시 읽는다(빠진 칸은 그때 크게 알린다)
     const 칸다있나 = 탭이름들.every(n => (필요칸[n] || []).every(c => c in 읽은것[n].자리));
     if (고쳤나 || !칸다있나) 읽은것 = null;
-    설정단추.style.display = '';
+    머리단추.display = '';
     알림('');
     await 그리기(true, 읽은것);
     if (재는중) { 시간재기('화면'); 여는시간두기(); 재는중 = false; }
@@ -565,7 +586,7 @@
 
   function 막기(답) {
     막힘 = 답; 알림('');
-    설정단추.style.display = 'none';
+    머리단추.display = 'none';
     화면그리기();
   }
 
@@ -687,6 +708,13 @@
     return true;
   }
 
+  // 생년 칸이 생기기 전(2026-10-17)에 만든 시트는 로드맵 탭에 「생년」이 없다. 맨 뒤에 붙인다 — 칸은 이름으로 찾는다
+  async function 로드맵맞추기(t) {
+    if (!t || !('연도' in t.자리) || '생년' in t.자리) return false;   // 연도마저 없으면 기록을 읽을 때 크게 알린다
+    await 값쓰기("'로드맵'!" + 열글자(t.머리.length) + '1', [['생년']]);
+    return true;
+  }
+
   async function 값쓰기(범위, 값들) {
     await api(시트API('/values:batchUpdate'), { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ valueInputOption:'RAW', data:[{ range:범위, values:값들 }] }) });
@@ -800,7 +828,7 @@
   const 월일 = d => (d.getMonth()+1) + '/' + d.getDate();
 
   // 지금 보는 기간과, 그 화면이 참고로 띄울 상위 기간·지난 기간 (설계 6장 「참고」)
-  // 상위.고정이 있으면 상위 계획을 영역 맨 위에 접지 않고 늘 보인다 (8k.1). 연간은 상위(로드맵)가 [6]까지 없다
+  // 상위.고정이 있으면 상위 계획을 영역 맨 위에 접지 않고 늘 보인다 (8k.1). 연간의 상위(로드맵 1년 후)는 참고블록이 따로 붙인다
   // 다음 기간 — 이월을 보낼 곳 (8k.22). 일간은 다음 날, 주간은 다음 주(재정비 주간 포함), 분기는 다음 분기, 연간은 다음 해
   function 다음기간() {
     if (단위 === '일') return { 단위:'일', 기간: 날짜글(하루뒤(보는날, 1)), 말: '다음 날' };
@@ -826,7 +854,7 @@
       return { 단위:'연', 기간: String(연), 제목: 연 + '년', 같은기간이름: 연 + '년',
         꼬리: 월일(분기시작(연, 1)) + ' ~ ' + 월일(하루뒤(분기시작(연 + 1, 1), -1)) + ({'-1':' · 지난해', '0':' · 올해', '1':' · 내년'}[String(차이)] || ''),
         지금인가: 차이 === 0, 과거: 차이 < 0, 안내: '이번 해 항목 한 줄', 이: '해',
-        상위: { 단위:'', 기간:'', 짧게:'' },   // 연간의 상위는 로드맵 — [6]에서 붙인다. 그때까지 비워 둔다
+        상위: { 단위:'', 기간:'', 짧게:'' },   // 연간의 상위는 로드맵 — 핵심 목표 카드에 「1년 후」로 따로 붙인다(참고블록)
         지난: { 단위:'연', 기간: String(연 - 1), 이름: '지난 해 · ' + (연 - 1) + '년', 짧게: '지난 해',
           핵심문제: '지난 해 핵심 문제 · ' + (연 - 1) + '년' } };
     }
@@ -855,7 +883,8 @@
   const 분기형 = 보기 => 보기.단위 === '분기' || 보기.단위 === '연';   // 평가메모·핵심 문제가 있고 일기가 없는 회고
 
   // ── 그 기간의 기록을 모은다 (참고할 상위·지난 기간까지 한 번에 읽는다) ──
-  const 모을탭들 = 보기 => ['영역설정','주제설정','계획항목','피드백','일기'].concat(분기형(보기) ? ['핵심문제'] : []);
+  // 로드맵은 늘 함께 읽는다 — 연간 화면의 「1년 후」와 로드맵 화면이 같은 자료를 쓴다. 한 번에 읽으니 시트에 더 다녀오지 않는다
+  const 모을탭들 = 보기 => ['영역설정','주제설정','계획항목','피드백','일기','로드맵'].concat(분기형(보기) ? ['핵심문제'] : []);
   // 미리읽은: 켜질 때 이미 읽어 온 탭들(시트열기) — 있으면 다시 읽지 않는다
   async function 모으기(보기, 미리읽은) {
     const 탭들 = 미리읽은 || await 탭읽기(모을탭들(보기));
@@ -908,7 +937,15 @@
     // 핵심 문제는 기간 전체에 하나 (설계 5-9-1). 분기·연간만 읽는다
     const 핵 = 탭들['핵심문제'];
     const 핵심문제글 = (단, 간) => { if (!핵) return ''; const 행 = 핵.행들.find(행 => 그기간(핵, 행, 단, 간)); return 행 ? 핵.값(행,'내용') : ''; };
+    // 로드맵 — 연도 → 그 해의 칸들 (설계 5-3). 같은 연도가 두 줄이면 먼저 것을 쓴다
+    const 로 = 탭들['로드맵'], 로드맵 = new Map();
+    if (로) 로.행들.forEach(행 => {
+      const 연 = Number(로.값(행,'연도'));
+      if (!연 || 로드맵.has(연)) return;
+      로드맵.set(연, Object.fromEntries(['생년'].concat(로드맵칸들.map(c => c[0])).map(k => [k, 로.값(행, k)])));
+    });
     return {
+      로드맵,
       핵심문제: 핵심문제글(보기.단위, 보기.기간),
       지난핵심문제: 핵심문제글(보기.지난.단위, 보기.지난.기간),
       영역전체, 주제맵, 주제항목수, 기간별항목, 일기있음,
@@ -967,9 +1004,13 @@
   // 시트에서 읽어 온 것(자료)을 들고 있다가, 손으로 바꾼 것은 화면부터 바로 고치고 저장은 뒤에서 한다.
   // 기다리는 저장이 끝나기 전에는 새로 읽지 않는다 — 읽으면 아직 안 들어간 것이 사라져 보인다.
   let 자료 = null, 보기 = null, 다시초점 = null;
-  let 화면종류 = '회고';   // '회고' 또는 '설정'
+  let 화면종류 = '회고';   // '회고' · '설정' · '로드맵'
   const 설정단추 = document.getElementById('설정단추');
   설정단추.addEventListener('click', () => 설정열기());
+  const 로드맵단추 = document.getElementById('로드맵단추');
+  로드맵단추.addEventListener('click', () => 로드맵열기(분기찾기(자정(new Date())).연));
+  // 머리의 두 단추(로드맵 · 설정)는 회고 화면에서만 보인다
+  const 머리단추 = { set display(v) { 설정단추.style.display = v; 로드맵단추.style.display = v; } };
   function 설정열기() { if (!자료) return; 화면종류 = '설정'; 설정편집 = null; 화면그리기(); window.scrollTo(0, 0); }
   function 설정닫기() { 화면종류 = '회고'; 설정편집 = null; 화면그리기(); 그리기(); window.scrollTo(0, 0); }
 
@@ -1009,9 +1050,10 @@
   function 화면그리기() {
     화면.innerHTML = '';
     setTimeout(고정바살피기, 0);
-    if (막힘) { 설정단추.style.display = 'none'; 막힘그리기(); return; }
-    설정단추.style.display = 화면종류 === '회고' ? '' : 'none';
+    if (막힘) { 머리단추.display = 'none'; 막힘그리기(); return; }
+    머리단추.display = 화면종류 === '회고' ? '' : 'none';
     if (화면종류 === '설정') { 설정그리기(); return; }
+    if (화면종류 === '로드맵') { 로드맵그리기(); return; }
     화면.appendChild(날짜카드(보기));
     // 분기·연간: 지난 기간 핵심 문제(읽기 전용) → 영역들 → 이번 기간 핵심 문제. 일기는 없다 (8k.3 · 설계 5-9)
     // 흐름 — 날짜 칸 바로 아래. 자기 단위 흐름 + 한 단계 아래 흐름 (8k.26)
@@ -1099,11 +1141,12 @@
         넘김줄.append(넘김('◀', 앞뒤말[0] + ' 흐름', -1), 가운데, 넘김('▶', 앞뒤말[1] + ' 흐름', 1));
         틀.appendChild(넘김줄);
         if (거름) {
-          const 이름글 = 거름.주제ID ? (((자료.주제맵.get(거름.주제ID) || {}).이름) || '그 주제') : '기타(주제 없는 항목)';
-          const 줄 = 요소('div','흐름거름줄', 이름글 + '만 보는 중');
-          const 풀기 = 요소('button','더보기',' 모두 보기');
-          풀기.addEventListener('click', () => { 흐름거름.delete(종류); 화면그리기(); });
-          줄.appendChild(풀기); 틀.appendChild(줄);
+          const 이름글 = 거름.주제ID ? (((자료.주제맵.get(거름.주제ID) || {}).이름) || '그 주제') : ((자료.영역전체.find(a => a.id === 거름.영역ID) || {}).이름 || '') + ' 기타';
+          // 「모두 보기」는 단추 모양으로 오른쪽 끝에 — 앞 글과 섞여 보이지 않게 (사용자, 2026-10-17)
+          const 줄 = 요소('div','흐름거름줄');
+          const 풀기 = 요소('button','순서단추','모두 보기');
+          풀기.addEventListener('click', () => { 흐름거름.delete(종류); 흐름펼침.clear(); 화면그리기(); });
+          줄.append(요소('span', null, 이름글 + '만 보는 중'), 풀기); 틀.appendChild(줄);
         }
         // 표 — 머리 두 줄: 영역(실행 초점 · 체질 초점 …) 아래에 그 영역에 나온 주제(주제 순서, 주제 없는 항목은 「기타」).
         // 칸에는 평가를 도형으로(○ 했다 · △ 일부 · ✕ 못했다 · · 평가 전) — 주제 색은 머리의 점에만 쓴다 (사용자, 2026-10-17)
@@ -1144,7 +1187,8 @@
         });
         머리.append(줄1, 줄2);
         const 몸 = 요소('tbody');
-        묶음들.forEach(m => 흐름묶음(m, m === 지금묶음, 열들).forEach(줄 => 몸.appendChild(줄)));
+        묶음들.forEach(m => 흐름묶음(m, m === 지금묶음, 열들, !!거름).forEach(줄 => 몸.appendChild(줄)));
+        if (거름) 표.classList.add('글표');
         표.append(머리, 몸);
         const 감싸기 = 요소('div','흐름표틀'); 감싸기.appendChild(표);
         틀.appendChild(감싸기);
@@ -1152,16 +1196,22 @@
     return card;
   }
   const 평가도형 = h => ({ '했다':['○','도형했다'], '일부':['△','도형일부'], '못했다':['✕','도형못했다'] }[h.평가] || ['·','도형전']);
-  function 흐름묶음(m, 지금, 열들) {
+  // 글까지: 주제 하나만 볼 때(칸이 넉넉하다) 칸에 도형과 함께 항목 내용도 참고처럼 보인다 (사용자, 2026-10-17)
+  function 흐름묶음(m, 지금, 열들, 글까지) {
     const 열쇠 = '흐름묶음:' + m.단위 + ':' + m.기간;
     let 펼침 = 흐름펼침.has(열쇠) ? 흐름펼침.get(열쇠) : false;   // 지금 기간도 접힌 채로 시작 (사용자, 2026-10-17)
     const 머리 = 요소('tr','흐름줄' + (지금 ? ' 지금' : ''));
-    머리.append(요소('td','흐름기간칸', m.이름 + (지금 ? ' ·지금' : '')));
+    머리.append(요소('td','흐름기간칸', m.이름));   // 지금 기간은 바탕색으로만 (사용자, 2026-10-17)
     let 앞영역 = null;
     열들.forEach(({ 영역, 주제ID }) => {
       const td = 요소('td','흐름도형칸' + (영역 !== 앞영역 ? ' 영역첫칸' : '')); 앞영역 = 영역;
       m.항목들.filter(h => h.영역ID === 영역.id && (h.주제ID || '') === 주제ID).forEach(h => {
-        const [글, cls] = 평가도형(h); td.appendChild(요소('span', '흐름도형 ' + cls, 글));
+        const [글, cls] = 평가도형(h);
+        if (!글까지) { td.appendChild(요소('span', '흐름도형 ' + cls, 글)); return; }
+        const 평가색 = { '했다':'참고했다', '일부':'참고일부', '못했다':'참고못했다' }[h.평가];
+        const 줄 = 요소('div','참고줄' + (평가색 ? ' 평가줄 ' + 평가색 : ''));
+        줄.append(요소('b', null, 기호(h.평가)), document.createTextNode(제목만(h.계획)));
+        td.appendChild(줄);
       });
       머리.appendChild(td);
     });
@@ -1396,6 +1446,19 @@
     const 제목칸 = (글, 고정) => 요소('div', '참고제목' + (고정 ? ' 고정제목' : ''), 글);
 
     // 차례는 상위 기간부터, 같은 기간 안에서는 영역 순서대로(핵심 목표 → 실행 → 체질) — 상위 → 같은 기간 → 지난 기간 (사용자, 2026-10-17)
+    // ⓪ 연간 핵심 목표의 상위는 그 해 로드맵의 「1년 후」 — 늘 펼친다 (설계 6장 「참고」 정리표)
+    if (보기.단위 === '연' && 영역.id === 'base_goal') {
+      const 연 = Number(보기.기간), 글 = (자료.로드맵.get(연) || {})['1년 후'] || '';
+      const 로드맵가기 = 글자 => { const b = 요소('button','글자단추', 글자); b.style.padding = '0';
+        b.addEventListener('click', ev => { ev.stopPropagation(); if (넘겨도되나()) 로드맵열기(연); }); return b; };
+      const 제목 = 제목칸(연 + '년 로드맵 · 1년 후', true);
+      if (글) 제목.appendChild(로드맵가기('로드맵 ›'));
+      묶음.appendChild(참고칸({ 열쇠: 열쇠앞 + '로드맵', 고정: true, 제목,
+        채우기: 틀 => {
+          if (글) { 틀.appendChild(펼침글(글, '참고줄')); return; }
+          const 없음 = 요소('div','참고줄', '로드맵 1년 후 없음 — '); 없음.appendChild(로드맵가기('로드맵에서 그리기 ›')); 틀.appendChild(없음);
+        } }));
+    }
     // ① 상위 기간 핵심 목표 — 주간 실행 초점 (접힘)
     if (보기.단위 === '주' && 영역.id === 'base_action') {
       const 목표들 = 자료.상위항목.filter(h => h.영역ID === 'base_goal');
@@ -2148,6 +2211,104 @@
     단추줄.appendChild(btn);
     틀.append(ta, 단추줄);
     return 틀;
+  }
+
+  // ── 로드맵 화면 (설계 5-3 · 6장 5번) ── 해마다 한 장. 새 해는 빈 칸에서 다시 생각해 적고, 지난 해 것은 칸 아래 접어 둔다
+  // — 먼저 적고 나서 참고한다(사용자, 2026-10-17). 나이는 그 로드맵의 해를 기준으로 한 한국 나이(태어난 해에 1살)
+  let 로드맵연 = null, 생년고치는중 = false;
+  function 로드맵열기(연) { if (!자료) return; 로드맵연 = 연; 생년고치는중 = false; 화면종류 = '로드맵'; 화면그리기(); window.scrollTo(0, 0); }
+  function 로드맵닫기() { 화면종류 = '회고'; 화면그리기(); window.scrollTo(0, 0); }
+  // 생년 — 그 해 줄에 있으면 그것, 없으면 가장 가까운 해 줄의 것
+  function 생년알기(연) {
+    const 그해 = 자료.로드맵.get(연);
+    if (그해 && 그해.생년) return Number(그해.생년);
+    const 해들 = [...자료.로드맵.keys()].filter(y => 자료.로드맵.get(y).생년).sort((a, b) => Math.abs(a - 연) - Math.abs(b - 연));
+    return 해들.length ? Number(자료.로드맵.get(해들[0]).생년) : null;
+  }
+  const 한국나이 = (해, 생년) => 해 - 생년 + 1;
+  // 생년은 사실이라 모든 해의 줄에 같은 값을 쓴다. 이 해 줄이 없으면 만든다
+  function 생년저장(연, 생년) {
+    자료.로드맵.forEach(줄 => { 줄.생년 = String(생년); });
+    if (!자료.로드맵.has(연)) 자료.로드맵.set(연, { 생년: String(생년) });
+    생년고치는중 = false;
+    화면그리기();
+    저장하기(async () => {
+      await 고치기('로드맵', [{ 모두:true, 찾기:(행, v) => !!v(행,'연도') && v(행,'생년') !== String(생년), 바꿀것:{ '생년':String(생년) } }]);
+      await 행찾아쓰기('로드맵', (행, v) => v(행,'연도') === String(연), { '생년':String(생년) },
+        () => ({ '연도':String(연), '생년':String(생년), '수정시각':지금() }));
+    }, () => '저장하려던 생년: ' + 생년);
+  }
+  function 생년줄(연) {
+    const 줄 = 요소('div','생년줄');
+    const 생년 = 생년알기(연);
+    if (생년 && !생년고치는중) {
+      줄.append(요소('span', null, 생년 + '년생 · ' + 연 + '년에 ' + 한국나이(연, 생년) + '세 (한국 나이)'));
+      const 고침 = 요소('button','글자단추','고치기'); 고침.style.padding = '0';
+      고침.addEventListener('click', () => { 생년고치는중 = true; 화면그리기(); });
+      줄.appendChild(고침);
+      return 줄;
+    }
+    const inp = 요소('input'); inp.type = 'text'; inp.inputMode = 'numeric'; inp.maxLength = 4; inp.placeholder = '예: 1987';
+    if (생년) inp.value = 생년;
+    const 저장 = 요소('button','작은단추','저장');
+    const 이번해 = 자정(new Date()).getFullYear();
+    저장.addEventListener('click', () => {
+      const v = Number(inp.value.trim());
+      if (!/^\d{4}$/.test(inp.value.trim()) || v < 1900 || v > 이번해) { 알림('태어난 해를 네 자리로 적어 주세요 (예: 1987).', 'err'); return; }
+      생년저장(연, v);
+    });
+    줄.append(요소('span', null, '생년'), inp, 저장, 요소('span', null, '나이는 한국 나이로'));
+    return 줄;
+  }
+  function 로드맵그리기() {
+    const 연 = 로드맵연, 줄 = 자료.로드맵.get(연) || {}, 지난줄 = 자료.로드맵.get(연 - 1) || {};
+    const 머리 = 요소('div','설정머리');
+    머리.appendChild(요소('h2', null, '로드맵'));
+    const 닫기 = 요소('button','닫기단추','✕'); 닫기.setAttribute('aria-label','로드맵 닫기');
+    닫기.addEventListener('click', 로드맵닫기);
+    머리.appendChild(닫기);
+    화면.appendChild(머리);
+
+    const 해카드 = 요소('div','card');
+    const 날줄 = 요소('div','날짜줄');
+    const 넘김 = (글, 이름표, d) => { const b = 요소('button','넘김', 글); b.setAttribute('aria-label', 이름표);
+      b.addEventListener('click', () => { if (!넘겨도되나()) return; 로드맵연 = 연 + d; 생년고치는중 = false; 화면그리기(); }); return b; };
+    const 차이 = 연 - 분기찾기(자정(new Date())).연;
+    const 가운데 = 요소('div','날짜', 연 + '년 로드맵');
+    const 꼬리 = { '-1':'지난해', '0':'올해', '1':'내년' }[String(차이)];
+    if (꼬리) 가운데.appendChild(요소('small', null, 꼬리));
+    날줄.append(넘김('◀','지난 해 로드맵', -1), 가운데, 넘김('▶','다음 해 로드맵', 1));
+    해카드.append(날줄, 생년줄(연));
+    화면.appendChild(해카드);
+
+    const 생년 = 생년알기(연);
+    ['삶의 목적', '이정표'].forEach(묶음 => {
+      const card = 요소('div','card');
+      card.appendChild(요소('div','영역이름', 묶음));
+      로드맵칸들.filter(c => c[1] === 묶음).forEach(([칸, , 안내, 몇년]) => {
+        const 틀 = 요소('div','로드맵칸');
+        const 제목 = 요소('div','칸제목', 칸);
+        if (몇년) {
+          const 그해 = 연 + 몇년;
+          제목.appendChild(생년 ? 요소('small', null, 그해 + '년 · ' + 한국나이(그해, 생년) + '세')
+                                : 요소('small', '필요', 그해 + '년 · 생년 입력 필요'));
+        }
+        틀.appendChild(제목);
+        틀.appendChild(글칸('로드맵:' + 연 + ':' + 칸, null, 줄[칸] || '', 안내, 글 => {
+          const 지금줄 = 자료.로드맵.get(연) || {};
+          지금줄[칸] = 글; 자료.로드맵.set(연, 지금줄);
+          const 넣을생년 = 생년 ? String(생년) : '';
+          return () => 행찾아쓰기('로드맵', (행, v) => v(행,'연도') === String(연), { [칸]:글, '수정시각':지금() },
+            () => ({ '연도':String(연), '생년':넣을생년, [칸]:글, '수정시각':지금() }));
+        }));
+        // 지난 해 것은 접어 둔다 — 먼저 지금 생각을 적고, 그다음 펴서 비교한다 (사용자, 2026-10-17)
+        if (지난줄[칸]) 틀.appendChild(참고칸({ 열쇠: '로드맵:' + 연 + ':' + 칸 + ':지난', 고정: false,
+          제목: 요소('div','참고제목', (연 - 1) + '년 ' + 칸), 요약: '',
+          채우기: 몸 => 몸.appendChild(펼침글(지난줄[칸], '참고줄')) }));
+        card.appendChild(틀);
+      });
+      화면.appendChild(card);
+    });
   }
 
   // ── 설정 화면 (설계 6장 「설정 화면」) ──
